@@ -49,6 +49,14 @@ export class MessageController {
           from: message.data.sender_id,
           data: messageData,
         });
+      
+        this.messageGateway.server
+        .to(createMessageDto.receiver_id)
+        .emit('message', {
+            from: message.data.sender_id,
+            data: messageData,
+          });
+
       return {
         success: message.success,
         message: message.message,
@@ -68,9 +76,9 @@ export class MessageController {
     @Query()
     query: { conversation_id: string; limit?: number; cursor?: string },
   ) {
-    const user_id = req.user.userId;
+    const user_id = req?.user?.userId;
     const conversation_id = query.conversation_id as string;
-    const limit = Number(query.limit);
+    const limit = Number(query.limit) || 20;
     const cursor = query.cursor as string;
     try {
       const messages = await this.messageService.findAll({

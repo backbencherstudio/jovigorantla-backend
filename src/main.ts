@@ -1,16 +1,17 @@
 // external imports
-import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { join } from 'path';
 // import express from 'express';
 // internal imports
 import { AppModule } from './app.module';
 import { CustomExceptionFilter } from './common/exception/custom-exception.filter';
-import appConfig from './config/app.config';
 import { SojebStorage } from './common/lib/Disk/SojebStorage';
+import appConfig from './config/app.config';
 // import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
@@ -22,6 +23,11 @@ async function bootstrap() {
   // app.use('/payment/stripe/webhook', express.raw({ type: 'application/json' }));
 
   app.setGlobalPrefix('api');
+  // app.enableCors({
+  //   origin: '*',
+  //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  //   credentials: true,
+  // });
   app.enableCors();
   app.use(helmet());
   app.useStaticAssets(join(__dirname, '..', 'public'), {
@@ -32,7 +38,10 @@ async function bootstrap() {
     index: false,
     prefix: '/storage',
   });
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    transform: true,
+  }));
   app.useGlobalFilters(new CustomExceptionFilter());
 
   // storage setup
@@ -66,6 +75,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
   // end swagger
 
-  await app.listen(process.env.PORT ?? 4000, '0.0.0.0');
+  // set cookie parser
+  app.use(cookieParser());
+  await app.listen(process.env.PORT ?? 5000, '0.0.0.0');
 }
 bootstrap();

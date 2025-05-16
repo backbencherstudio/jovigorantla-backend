@@ -11,6 +11,8 @@ import appConfig from '../../config/app.config';
 import { SojebStorage } from '../../common/lib/Disk/SojebStorage';
 import { DateHelper } from '../../common/helper/date.helper';
 import { StripePayment } from 'src/common/lib/Payment/stripe/StripePayment';
+import { randomInt } from 'crypto';
+
 
 @Injectable()
 export class AuthService {
@@ -30,12 +32,12 @@ export class AuthService {
           id: true,
           name: true,
           email: true,
-          avatar: true,
-          address: true,
-          phone_number: true,
+          // avatar: true,
+          // address: true,
+          // phone_number: true,
           type: true,
-          gender: true,
-          date_of_birth: true,
+          // gender: true,
+          // date_of_birth: true,
           created_at: true,
         },
       });
@@ -47,11 +49,11 @@ export class AuthService {
         };
       }
 
-      if (user.avatar) {
-        user['avatar_url'] = SojebStorage.url(
-          appConfig().storageUrl.avatar + user.avatar,
-        );
-      }
+      // if (user?.avatar) {
+      //   user['avatar_url'] = SojebStorage.url(
+      //     appConfig().storageUrl.avatar + user?.avatar,
+      //   );
+      // }
 
       if (user) {
         return {
@@ -82,12 +84,12 @@ export class AuthService {
       if (updateUserDto.name) {
         data.name = updateUserDto.name;
       }
-      if (updateUserDto.first_name) {
-        data.first_name = updateUserDto.first_name;
-      }
-      if (updateUserDto.last_name) {
-        data.last_name = updateUserDto.last_name;
-      }
+      // if (updateUserDto.first_name) {
+      //   data.first_name = updateUserDto.first_name;
+      // }
+      // if (updateUserDto.last_name) {
+      //   data.last_name = updateUserDto.last_name;
+      // }
       if (updateUserDto.phone_number) {
         data.phone_number = updateUserDto.phone_number;
       }
@@ -209,43 +211,99 @@ export class AuthService {
     }
   }
 
-  async login({ email, userId }) {
+  async googleLogin(email: string, name: string) {
     try {
-      const payload = { email: email, sub: userId };
-      const token = this.jwtService.sign(payload);
-      const user = await UserRepository.getUserDetails(userId);
+      const user = await UserRepository.getUserByEmail(email);
 
-      return {
-        success: true,
-        message: 'Logged in successfully',
-        authorization: {
+      if (user) {
+        const payload = { email: email, sub: user.id, role: user.type };
+        const token = this.jwtService.sign(payload);
+
+        return {
+          success: true,
           token: token,
-          type: 'bearer',
-        },
-        type: user.type,
-      };
+          type: user.type,
+        };
+      } else {
+        const user = await UserRepository.createUser({
+          email: email,
+          name: name,
+        });
+        const payload = { email: email, sub: user.data.id, role: user.data.type };
+        const token = this.jwtService.sign(payload);
+
+        return {
+          success: true,
+          token: token,
+          type: user.data.type,
+        };
+      }
     } catch (error) {
       return {
         success: false,
-        message: error.message,
+        message: 'Failed to login',
       };
     }
   }
 
+  // async login({ email, userId }) {
+  //   try {
+  //     const payload = { email: email, sub: userId };
+  //     const token = this.jwtService.sign(payload);
+  //     const user = await UserRepository.getUserDetails(userId);
+
+  //     return {
+  //       success: true,
+  //       message: 'Logged in successfully',
+  //       authorization: {
+  //         token: token,
+  //         type: 'bearer',
+  //       },
+  //       type: user.type,
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
+
+
+  
+  async login({ email, userId, res }: { email: string; userId: string; res: any}) {
+    // const payload = { username: user.username, sub: user.userId };
+    // const token = this.jwtService.sign(payload);
+    const payload = { email: email, sub: userId };
+      const token = this.jwtService.sign(payload);
+      // const user = await UserRepository.getUserDetails(userId);
+
+      // Store token in cookie
+      res.cookie('jwt', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000 * 30, // 30 day
+      });
+
+    return { message: 'Login successful' };
+  }
+
+
+
+
   async register({
     name,
-    first_name,
-    last_name,
     email,
     password,
     type,
+    otp,
   }: {
     name: string;
-    first_name: string;
-    last_name: string;
     email: string;
     password: string;
     type?: string;
+    otp: string;
   }) {
     try {
       // Check if email already exist
@@ -261,10 +319,24 @@ export class AuthService {
         };
       }
 
+
+      // check varification exist or not
+      const existOtp = await this.prisma.verificationCode.findFirst({
+        where: {
+          email: email,
+          code: otp
+        },
+      });
+
+      if (!existOtp) {
+        return {
+          success: false,
+          message: 'Failed to create account',
+        };
+      }
+
       const user = await UserRepository.createUser({
         name: name,
-        first_name: first_name,
-        last_name: last_name,
         email: email,
         password: password,
         type: type,
@@ -277,23 +349,30 @@ export class AuthService {
         };
       }
 
-      // create stripe customer account
-      const stripeCustomer = await StripePayment.createCustomer({
-        user_id: user.data.id,
-        email: email,
-        name: name,
+      // delete the verification code 
+      await this.prisma.verificationCode.delete({
+        where: {
+          id: existOtp.id,
+        },
       });
 
-      if (stripeCustomer) {
-        await this.prisma.user.update({
-          where: {
-            id: user.data.id,
-          },
-          data: {
-            billing_id: stripeCustomer.id,
-          },
-        });
-      }
+      // create stripe customer account
+      // const stripeCustomer = await StripePayment.createCustomer({
+      //   user_id: user.data.id,
+      //   email: email,
+      //   name: name,
+      // });
+
+      // if (stripeCustomer) {
+      //   await this.prisma.user.update({
+      //     where: {
+      //       id: user.data.id,
+      //     },
+      //     data: {
+      //       billing_id: stripeCustomer.id,
+      //     },
+      //   });
+      // }
 
       // ----------------------------------------------------
       // // create otp code
@@ -317,22 +396,27 @@ export class AuthService {
       // ----------------------------------------------------
 
       // Generate verification token
-      const token = await UcodeRepository.createVerificationToken({
-        userId: user.data.id,
-        email: email,
-      });
+      // const token = await UcodeRepository.createVerificationToken({
+      //   userId: user.data.id,
+      //   email: email,
+      // });
 
-      // Send verification email with token
-      await this.mailService.sendVerificationLink({
-        email,
-        name: email,
-        token: token.token,
-        type: type,
-      });
+      // // Send verification email with token
+      // await this.mailService.sendVerificationLink({
+      //   email,
+      //   name: email,
+      //   token: token.token,
+      //   type: type,
+      // });
+
+      // return {
+      //   success: true,
+      //   message: 'We have sent a verification link to your email',
+      // };
 
       return {
         success: true,
-        message: 'We have sent a verification link to your email',
+        message: 'Account created successfully',
       };
     } catch (error) {
       return {
@@ -341,6 +425,105 @@ export class AuthService {
       };
     }
   }
+
+
+  async sendOtp(email: string){
+    try {
+
+      // check if email exist in users table
+      const user = await UserRepository.exist({
+        field: 'email',
+        value: String(email),
+      });
+      if (user) {
+        return {
+          success: false,
+          message: 'Email already exist',
+        };
+      }
+      // delete all the otp code of this email
+      await this.prisma.verificationCode.deleteMany({
+        where: {
+          email: email,
+        },
+      });
+
+      // create otp code
+      const code = String(randomInt(100000, 1000000));
+
+      await this.prisma.verificationCode.create({
+        data: {
+          email,
+          code,
+          expiresAt: new Date(Date.now() + 2 * 60 * 1000),
+        },
+      });
+
+      // Send verification email with token
+      await this.mailService.sendOtpCodeToEmail({
+        email,
+        name: email,
+        otp: code
+      });
+
+      return {
+        success: true,
+        message: 'We have sent an OTP code to your email',
+      };
+     
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  async verifyOtp(email: string, otp : string) {
+    try {
+      const record = await this.prisma.verificationCode.findFirst({
+        where: {
+          email: email,
+          code: otp,
+          expiresAt: { gte: new Date() },
+        },
+      });
+    
+      if (!record){
+        // delete verification code
+        await this.prisma.verificationCode.delete({
+          where: {
+            id: record.id,
+          },
+        });
+        return {
+          success: false,
+          message: 'Invalid OTP',
+        }
+      };
+
+      return {
+        success: true,
+        message: 'OTP verified',
+      }
+
+    } catch (error) {
+      // delete verification code
+      await this.prisma.verificationCode.deleteMany({
+        where: {
+          email: email,
+          code: otp,
+        },
+      });
+      return {
+        success: false,
+        message: 'Invalid OTP',
+      }
+    }
+  }
+
+
+  
 
   async forgotPassword(email) {
     try {

@@ -72,6 +72,8 @@ export default () => ({
     package: '/package/',
     destination: '/destination/',
     blog: '/blog/',
+    ads: '/ads/',
+    listing: '/listing/',
     avatar: '/avatar/',
     websiteInfo: '/website-info/',
     // chat

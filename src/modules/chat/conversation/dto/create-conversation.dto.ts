@@ -15,4 +15,12 @@ export class CreateConversationDto {
     description: 'The id of the participant',
   })
   participant_id: string;
+
+
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({
+    description: 'The id of the listing',
+  })
+  listing_id: string;
 }

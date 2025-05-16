@@ -7,12 +7,12 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Request } from 'express';
 import { diskStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
@@ -23,7 +23,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import appConfig from '../../config/app.config';
 import { AuthGuard } from '@nestjs/passport';
-
+import { Request, Response } from 'express';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -48,32 +49,78 @@ export class AuthController {
     }
   }
 
+  // send otp
+  @ApiOperation({ summary: 'Send OTP' })
+  @Post('send-otp')
+  async sendOTP(@Body() data: { email: string }) {
+    try {
+      const email = data?.email;
+      if (!email) {
+        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
+      }
+      return await this.authService.sendOtp(email);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to send OTP',
+      };
+    }
+  }
+
+  // verify email
+  @ApiOperation({ summary: 'Verify OTP' })
+  @Post('verify-otp')
+  async verifyOtp(@Body() data: VerifyOtpDto) {
+    try {
+      const email = data?.email;
+      const otp = data?.otp;
+      if (!email) {
+        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
+      }
+      if (!otp) {
+        throw new HttpException('OTP not provided', HttpStatus.UNAUTHORIZED);
+      }
+      return await this.authService.verifyOtp(email, otp);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to verify email',
+      };
+    }
+  }
+
+
+  // register user
   @ApiOperation({ summary: 'Register a user' })
   @Post('register')
   async create(@Body() data: CreateUserDto) {
     try {
       const name = data.name;
-      const first_name = data.first_name;
-      const last_name = data.last_name;
+      // const first_name = data.first_name;
+      // const last_name = data.last_name;
       const email = data.email;
       const password = data.password;
-      const type = data.type;
+      const otp = data.otp
+      // const type = data.type;
+      const type = 'user';
 
       if (!name) {
         throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
       }
-      if (!first_name) {
-        throw new HttpException(
-          'First name not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-      if (!last_name) {
-        throw new HttpException(
-          'Last name not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
+
+
+      // if (!first_name) {
+      //   throw new HttpException(
+      //     'First name not provided',
+      //     HttpStatus.UNAUTHORIZED,
+      //   );
+      // }
+      // if (!last_name) {
+      //   throw new HttpException(
+      //     'Last name not provided',
+      //     HttpStatus.UNAUTHORIZED,
+      //   );
+      // }
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
       }
@@ -84,13 +131,18 @@ export class AuthController {
         );
       }
 
+      if (!otp) {
+        throw new HttpException('OTP not provided', HttpStatus.UNAUTHORIZED);
+      }
+
       const response = await this.authService.register({
         name: name,
-        first_name: first_name,
-        last_name: last_name,
+        // first_name: first_name,
+        // last_name: last_name,
         email: email,
         password: password,
         type: type,
+        otp: otp
       });
 
       return response;
@@ -102,19 +154,46 @@ export class AuthController {
     }
   }
 
+
+
   // login user
+  // @ApiOperation({ summary: 'Login user' })
+  // @UseGuards(LocalAuthGuard)
+  // @Post('login')
+  // async login(@Req() req: Request) {
+  //   try {
+  //     const user_id = req?.user?.id;
+
+  //     const user_email = req?.user?.email;
+
+  //     const response = await this.authService.login({
+  //       userId: user_id,
+  //       email: user_email,
+  //     });
+
+  //     return response;
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
+
+
   @ApiOperation({ summary: 'Login user' })
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Req() req: Request) {
+  async login(@Req() req: Request,  @Res({ passthrough: true }) res: Response) {
     try {
-      const user_id = req.user.id;
+      const user_id = req?.user?.id;
 
-      const user_email = req.user.email;
+      const user_email = req?.user?.email;
 
       const response = await this.authService.login({
         userId: user_id,
         email: user_email,
+        res
       });
 
       return response;
@@ -124,6 +203,13 @@ export class AuthController {
         message: error.message,
       };
     }
+  }
+
+
+  @Post('logout')
+  async logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('jwt');
+    return { message: 'Logged out' };
   }
 
   @Get('google')
@@ -134,11 +220,47 @@ export class AuthController {
 
   @Get('google/redirect')
   @UseGuards(AuthGuard('google'))
-  async googleLoginRedirect(@Req() req: Request): Promise<any> {
-    return {
-      statusCode: HttpStatus.OK,
-      data: req.user,
-    };
+  async googleLoginRedirect(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<any> {
+    try {
+      const email = req.user.email;
+      const name = req.user?.firstName + ' ' + req.user?.lastName;
+      const response = await this.authService.googleLogin(email, name);
+      if (response.success) {
+        // Set the JWT in an HttpOnly cookie
+        res.cookie('jwt', response.token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 24 * 60 * 60 * 1000 * 30, // 30 day
+        });
+  
+        // Redirect to client without query params
+        return res.redirect(`${appConfig().app.client_app_url}`);
+      } else {
+        return {
+          success: false,
+          message: 'Google login failed',
+        };
+      }
+      // if (response.success) {
+      //   res.redirect(
+      //     `${appConfig().app.client_app_url}/auth/google?token=${response.token}&userRole=${response.type}`,
+      //   );
+      // } else {
+      //   return {
+      //     success: false,
+      //     message: 'Google login failed',
+      //   };
+      // }
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
   }
 
   // update user
@@ -184,7 +306,7 @@ export class AuthController {
   @Post('forgot-password')
   async forgotPassword(@Body() data: { email: string }) {
     try {
-      const email = data.email;
+      const email = data?.email;
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
       }
@@ -247,9 +369,9 @@ export class AuthController {
     @Body() data: { email: string; token: string; password: string },
   ) {
     try {
-      const email = data.email;
-      const token = data.token;
-      const password = data.password;
+      const email = data?.email;
+      const token = data?.token;
+      const password = data?.password;
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
       }
@@ -268,6 +390,8 @@ export class AuthController {
         password: password,
       });
     } catch (error) {
+      console.log(error);
+      
       return {
         success: false,
         message: 'Something went wrong',

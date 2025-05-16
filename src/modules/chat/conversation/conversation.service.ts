@@ -26,6 +26,10 @@ export class ConversationService {
         data.participant_id = createConversationDto.participant_id;
       }
 
+      if (createConversationDto.listing_id) {
+        data.listing_id = createConversationDto.listing_id;
+      }
+
       // check if conversation exists
       let conversation = await this.prisma.conversation.findFirst({
         select: {
@@ -48,6 +52,12 @@ export class ConversationService {
               avatar: true,
             },
           },
+          listing: {
+            select: {
+              id: true,
+              title: true,
+            }
+          },
           messages: {
             orderBy: {
               created_at: 'desc',
@@ -61,14 +71,27 @@ export class ConversationService {
           },
         },
         where: {
-          creator_id: data.creator_id,
-          participant_id: data.participant_id,
+          listing_id: createConversationDto.listing_id,
+          OR: [
+            {
+              creator_id: createConversationDto.creator_id,
+              participant_id: createConversationDto.participant_id,
+            },
+            {
+              creator_id: createConversationDto.participant_id,
+              participant_id: createConversationDto.creator_id,
+            },
+          ],
         },
+        // where: {
+        //   creator_id: data.creator_id,
+        //   participant_id: data.participant_id,
+        // },
       });
 
       if (conversation) {
         return {
-          success: false,
+          success: true,
           message: 'Conversation already exists',
           data: conversation,
         };
@@ -94,6 +117,12 @@ export class ConversationService {
               name: true,
               avatar: true,
             },
+          },
+          listing: {
+            select: {
+              id: true,
+              title: true,
+            }
           },
           messages: {
             orderBy: {
@@ -147,9 +176,15 @@ export class ConversationService {
     }
   }
 
-  async findAll() {
+  async findAll(user_id: string) {
     try {
       const conversations = await this.prisma.conversation.findMany({
+        where: {
+          OR: [
+            { creator_id: user_id },
+            { participant_id: user_id },
+          ],
+        },
         orderBy: {
           updated_at: 'desc',
         },
@@ -172,6 +207,12 @@ export class ConversationService {
               name: true,
               avatar: true,
             },
+          },
+          listing: {
+            select: {
+              id: true,
+              title: true,
+            }
           },
           messages: {
             orderBy: {
@@ -213,10 +254,16 @@ export class ConversationService {
     }
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user_id: string) {
     try {
-      const conversation = await this.prisma.conversation.findUnique({
-        where: { id },
+      const conversation = await this.prisma.conversation.findFirst({
+        where: { 
+          id,
+          OR: [
+            { creator_id: user_id },
+            { participant_id: user_id },
+          ],
+         },
         select: {
           id: true,
           creator_id: true,
@@ -237,8 +284,22 @@ export class ConversationService {
               avatar: true,
             },
           },
+          listing: {
+            select: {
+              id: true,
+              title: true,
+            }
+          },
         },
       });
+
+      
+    if (!conversation) {
+      return {
+        success: false,
+        message: 'Conversation not found',
+      };
+    }
 
       // add image url
       if (conversation.creator.avatar) {
@@ -289,10 +350,40 @@ export class ConversationService {
     }
   }
 
-  async remove(id: string) {
+  async remove(id: string, user_id: string) {
     try {
+
+      // check if conversation exists
+      const conversation = await this.prisma.conversation.findFirst({
+        where: {
+          id,
+          OR: [
+            { creator_id: user_id },
+            { participant_id: user_id },
+          ],
+        },
+      });
+
+      if (!conversation) {
+        return {
+          success: false,
+          message: 'Conversation not found',
+        };
+      }
+
       await this.prisma.conversation.delete({
         where: { id },
+      });
+
+      // trigger socket event
+      this.messageGateway.server.to(conversation.creator_id).emit('delete-conversation', {
+        from: conversation.creator_id,
+        data: conversation,
+      });
+      
+      this.messageGateway.server.to(conversation.participant_id).emit('delete-conversation', {
+        from: conversation.participant_id,
+        data: conversation,
       });
 
       return {

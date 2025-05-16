@@ -37,6 +37,10 @@ export class MessageService {
       const conversation = await this.prisma.conversation.findFirst({
         where: {
           id: data.conversation_id,
+          OR: [
+            { creator_id: user_id },
+            { participant_id: user_id },
+          ],
         },
       });
 
