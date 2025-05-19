@@ -24,12 +24,25 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   // app.enableCors({
-  //   origin: '*',
+  //   origin: process.env.CLIENT_URL,
   //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   //   credentials: true,
   // });
-  app.enableCors();
-  app.use(helmet());
+  // set cookie parser
+  app.use(cookieParser());
+  app.enableCors({
+    origin: process.env.CLIENT_URL,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+   
+
+
+  app.use(helmet(
+    {
+      crossOriginResourcePolicy: false,
+    },
+  ));
   app.useStaticAssets(join(__dirname, '..', 'public'), {
     index: false,
     prefix: '/public',
@@ -75,8 +88,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
   // end swagger
 
-  // set cookie parser
-  app.use(cookieParser());
+ 
   await app.listen(process.env.PORT ?? 5000, '0.0.0.0');
 }
 bootstrap();

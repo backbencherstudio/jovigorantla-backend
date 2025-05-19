@@ -274,7 +274,8 @@ export class AuthService {
   async login({ email, userId, res }: { email: string; userId: string; res: any}) {
     // const payload = { username: user.username, sub: user.userId };
     // const token = this.jwtService.sign(payload);
-    const payload = { email: email, sub: userId };
+    try {
+      const payload = { email: email, sub: userId };
       const token = this.jwtService.sign(payload);
       // const user = await UserRepository.getUserDetails(userId);
 
@@ -286,7 +287,16 @@ export class AuthService {
         maxAge: 24 * 60 * 60 * 1000 * 30, // 30 day
       });
 
-    return { message: 'Login successful' };
+    return { 
+      success: true,
+      message: 'Logged in successfully',
+     };
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to login"
+      }
+    }
   }
 
 

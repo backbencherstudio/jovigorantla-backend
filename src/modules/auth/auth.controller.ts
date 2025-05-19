@@ -208,8 +208,18 @@ export class AuthController {
 
   @Post('logout')
   async logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('jwt');
-    return { message: 'Logged out' };
+    try {
+      res.clearCookie('jwt');
+      return {
+        success: true,
+        message: 'Logged out successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Something went wrong',
+      }
+    }
   }
 
   @Get('google')
@@ -228,6 +238,7 @@ export class AuthController {
       const email = req.user.email;
       const name = req.user?.firstName + ' ' + req.user?.lastName;
       const response = await this.authService.googleLogin(email, name);
+      // console.log(response);
       if (response.success) {
         // Set the JWT in an HttpOnly cookie
         res.cookie('jwt', response.token, {
@@ -238,7 +249,11 @@ export class AuthController {
         });
   
         // Redirect to client without query params
-        return res.redirect(`${appConfig().app.client_app_url}`);
+        return res.redirect(`${appConfig().app.client_app_url}`)
+        // return {
+        //   success: true,
+        //   message: 'Google login successful',
+        // };
       } else {
         return {
           success: false,
