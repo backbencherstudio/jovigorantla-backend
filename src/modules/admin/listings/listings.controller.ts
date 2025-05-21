@@ -38,7 +38,7 @@ export class ListingsController {
   // }
 
   @Get('flagged-listings')
-  async getFlaggedListings(listingsQueryDto: ListingsQueryDto) {
+  async getFlaggedListings(@Query() listingsQueryDto: ListingsQueryDto) {
     try {
       return await this.listingsService.getFlaggedListings(listingsQueryDto);
     } catch (error) {
@@ -50,7 +50,7 @@ export class ListingsController {
   }
 
   @Get('usa-listings')
-  async getUsaListings(listingsQueryDto: ListingsQueryDto) {
+  async getUsaListings(@Query()listingsQueryDto: ListingsQueryDto) {
     try {
       return await this.listingsService.getUsaListings(listingsQueryDto);
     } catch (error) {
@@ -63,7 +63,7 @@ export class ListingsController {
 
   // get flagged listings history
   @Get('flagged-listings-history')
-  async getFlaggedListingsHistory(listingsHitoryDto: ListingsQueryDto) {
+  async getFlaggedListingsHistory(@Query()listingsHitoryDto: ListingsQueryDto) {
     try {
       return await this.listingsService.getFlaggedListingsHitory(listingsHitoryDto);
     } catch (error) {
@@ -77,7 +77,7 @@ export class ListingsController {
 
   // get flagged listings history
   @Get('usa-listings-history')
-  async getUsaListingsHistory(listingsHitoryDto: ListingsQueryDto) {
+  async getUsaListingsHistory(@Query()listingsHitoryDto: ListingsQueryDto) {
     try {
       return await this.listingsService.getUsaListingsHitory(listingsHitoryDto);
     } catch (error) {

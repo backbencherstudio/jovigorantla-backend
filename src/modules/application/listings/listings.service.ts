@@ -723,6 +723,14 @@ export class ListingsService {
       }
     }
 
+    finalFeed.forEach(item => {
+      if (item?.type === 'ad' && item?.image) {
+        item['image_url'] = SojebStorage.url(
+          appConfig().storageUrl.ads + item?.image,
+        )
+      }
+    })
+
     const nextCursorDistance = hasNextPage
       ? realListings[realListings.length - 1].distance_meters
       : null;

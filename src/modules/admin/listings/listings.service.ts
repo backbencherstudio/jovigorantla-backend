@@ -1,4 +1,4 @@
-import { Get, Injectable } from '@nestjs/common';
+import { Body, Get, Injectable } from '@nestjs/common';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -41,11 +41,29 @@ export class ListingsService {
         include: {
           user: {
             select: {
-              name: true
+              name: true,
+              email: true,
             }
           }
         }
       });
+
+
+      // const hasNextPage = listings.length > limit;
+      // const data = hasNextPage ? listings.slice(0, limit) : listings;
+
+      // return {
+      //   success: true,
+      //   message: 'Listings fetched successfully',
+      //   data: data.map(listing => ({
+      //     ...listing,
+      //     image_url: listing.image 
+      //       ? SojebStorage.url(appConfig().storageUrl.listing + listing.image)
+      //       : null,
+      //   })),
+      //   hasNextPage,
+      //   nextCursor: hasNextPage ? listings[limit].id : null, // ✅ This is the correct one
+      // };
 
       const hasNextPage = listings.length > limit;
       const data = hasNextPage ? listings.slice(0, limit) : listings;
@@ -132,7 +150,7 @@ export class ListingsService {
     }
   }
 
-  async update(id: string, updateListingDto: UpdateListingDto) {
+  async update(id: string, @Body() updateListingDto: UpdateListingDto) {
     try{
       const listing = await this.prisma.listing.findUnique({
         where: {
@@ -146,6 +164,8 @@ export class ListingsService {
           message: 'Listing not found',
         }
       }
+
+      // console.log(updateListingDto.flagged_listing_status)
 
       const updatedListing = await this.prisma.listing.update({
         where: {
@@ -177,7 +197,8 @@ export class ListingsService {
   async getFlaggedListingsHitory(listingsHitoryDto: ListingsQueryDto) {
     try {
       const cursor = listingsHitoryDto?.cursor || undefined;
-      const limit = listingsHitoryDto?.limit || 20;
+      // const limit = listingsHitoryDto?.limit || 20;
+      const limit = 6;
 
       // Find listings with pagination using cursor
       const listings = await this.prisma.listing.findMany({
@@ -194,7 +215,8 @@ export class ListingsService {
         include: {
           user: {
             select: {
-              name: true
+              name: true,
+              email: true
             }
           }
         }

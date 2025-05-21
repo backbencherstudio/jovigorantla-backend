@@ -128,12 +128,12 @@ export class AdsGroupService {
       const data: any = {}
       if(updateAdsGroupDto?.name) data.name = updateAdsGroupDto.name;
       if(updateAdsGroupDto?.frequency) data.frequency = updateAdsGroupDto.frequency;
-      if(updateAdsGroupDto?.start_date) data.start_date = updateAdsGroupDto.start_date;
-      if(updateAdsGroupDto?.end_date) data.end_date = updateAdsGroupDto.end_date;
+      if(updateAdsGroupDto?.start_date || updateAdsGroupDto?.start_date == null) data.start_date = updateAdsGroupDto.start_date;
+      if(updateAdsGroupDto?.end_date || updateAdsGroupDto?.end_date == null) data.end_date = updateAdsGroupDto.end_date;
       if(updateAdsGroupDto?.display_pages) data.display_pages = updateAdsGroupDto.display_pages;
       if(updateAdsGroupDto?.active == true || updateAdsGroupDto.active == false) data.active = updateAdsGroupDto.active;
 
-      
+      console.log(data);
 
       const updated_ad_group = await this.prisma.adGroup.update({
         where: {
@@ -142,6 +142,7 @@ export class AdsGroupService {
         data,
       })
 
+      console.log("updated_ad_group => ", updated_ad_group)
       return {
         success: true,
         message: "ads group updated successfully",
@@ -149,6 +150,7 @@ export class AdsGroupService {
       }
       
     } catch (error) {;
+      console.log(error);
       return {
         success: false,
         message: "ads group update failed",

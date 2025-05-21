@@ -75,6 +75,7 @@ export class AdsGroupController {
     }
   }
 
+  @UseInterceptors(FileInterceptor('image'))
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateAdsGroupDto: UpdateAdsGroupDto) {
     try {

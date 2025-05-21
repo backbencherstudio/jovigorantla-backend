@@ -1,4 +1,4 @@
-import { IsString, IsInt, IsOptional, IsDate, IsArray, IsNotEmpty, ArrayMinSize, IsEnum, IsUrl, MinLength, ValidateNested, IsBoolean } from 'class-validator';
+import { IsString, IsInt, IsOptional, IsDate, IsArray, IsNotEmpty, ArrayMinSize, IsEnum, IsUrl, MinLength, ValidateNested, IsBoolean, IsDateString } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { DisplayPageType } from 'src/common/enum/display-page-type.enum';
 
@@ -13,15 +13,41 @@ export class CreateAdsGroupDto {
     @IsInt()
     frequency: number;
 
-    @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    start_date?: Date;
+    // @IsOptional()
+    // @Type(() => Date)
+    // @IsDate()
+    // start_date?: Date;
+
+    // @IsOptional()
+    // @Type(() => Date)
+    // @IsDate()
+    // end_date?: Date;
 
     @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    end_date?: Date;
+    @Transform(({ value }) => {
+      // try to convert into date
+      if(value && typeof value === 'string'){
+       const date = new Date(value);
+       if (isNaN(date.getTime())) {
+         return null; // Invalid date
+       }
+       return date.toISOString();
+      }
+   })
+    start_date?: string | null;
+
+    @IsOptional()
+    @Transform(({ value }) => {
+       // try to convert into date
+       if(value && typeof value === 'string'){
+        const date = new Date(value);
+        if (isNaN(date.getTime())) {
+          return null; // Invalid date
+        }
+        return date.toISOString();
+       }
+    })
+    end_date?: string | null;
 
     @Transform(({ value }) => {
         try {
