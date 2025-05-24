@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { CreateAdsGroupDto } from './dto/create-ads-group.dto';
 import { UpdateAdsGroupDto } from './dto/update-ads-group.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { trace } from 'console';
 import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
 import appConfig from 'src/config/app.config';
 

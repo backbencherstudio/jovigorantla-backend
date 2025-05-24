@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CreateFavoriteDto } from './dto/create-favorite.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { CreateFavoriteDto } from './dto/create-favorite.dto';
 
 @Injectable()
 export class FavoritesService {
@@ -53,10 +53,27 @@ export class FavoritesService {
 
   async findAll(user_id: string) {
     try {
+      // const favorites = await this.prisma.favorite.findMany({
+      //   where: { user_id },
+      //   include: { 
+      //     listing: true 
+      //   },
+      // });
+
       const favorites = await this.prisma.favorite.findMany({
-        where: { user_id },
-        include: { listing: true },
-      });
+      where: { user_id },
+      include: {
+        listing: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
   
       const listings = favorites.map(fav => fav.listing);
 

@@ -782,11 +782,11 @@ export class ListingsService {
         ];
       }
 
-      if (is_usa === true) {
-        conditions.post_to_usa = true;
-      } else{
-        conditions.post_to_usa = false;
-      }
+      // if (is_usa === true) {
+      //   conditions.post_to_usa = true;
+      // } else{
+      //   conditions.post_to_usa = false;
+      // }
       // else {
       //   conditions.flagged_listing_status = 'APPROVED';
       // }
