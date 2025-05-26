@@ -7,7 +7,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 @Injectable()
 export class MailService {
   constructor(
-    @InjectQueue('mail-queue') private queue: Queue,
+    @InjectQueue('bbs-queue') private queue: Queue,
     private mailerService: MailerService,
   ) {}
 
