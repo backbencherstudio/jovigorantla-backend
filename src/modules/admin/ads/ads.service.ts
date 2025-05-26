@@ -5,82 +5,315 @@ import { CreateSidebarAdDto } from './dto/create-sidebar-ad.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
 import appConfig from 'src/config/app.config';
+import * as cuid from 'cuid';
 
 @Injectable()
 export class AdsService {
   constructor(private prisma: PrismaService){}
-  async create(createAdDto: CreateAdDto, image: Express.Multer.File) {
-    try {
-      if (!image) {
-        return {
-          success: false,
-          message: "image is required",
-        }
-      }
+  // async create(createAdDto: CreateAdDto, image: Express.Multer.File) {
+  //   try {
+  //     if (!image) {
+  //       return {
+  //         success: false,
+  //         message: "image is required",
+  //       }
+  //     }
 
-      if (!createAdDto.target_url) {
-        return {
-          success: false,
-          message: "target url is required",
-        }
-      }
+  //     if (!createAdDto.target_url) {
+  //       return {
+  //         success: false,
+  //         message: "target url is required",
+  //       }
+  //     }
 
-      if (!createAdDto.name) {
-        return {
-          success: false,
-          message: "name is required",
-        }
-      }
+  //     if (!createAdDto.name) {
+  //       return {
+  //         success: false,
+  //         message: "name is required",
+  //       }
+  //     }
 
-      if (!createAdDto.ad_group_id) {
-        return {
-          success: false,
-          message: "group id is required",
-        }
-      }
+  //     if (!createAdDto.ad_group_id) {
+  //       return {
+  //         success: false,
+  //         message: "group id is required",
+  //       }
+  //     }
 
-    // find add group
+  //   // find add group
+  //   const adGroup = await this.prisma.adGroup.findUnique({
+  //     where: {
+  //       id: createAdDto.ad_group_id,
+  //     },
+  //   })
+
+  //   if (!adGroup) {
+  //     return {
+  //       success: false,
+  //       message: "ad group not found",
+  //   }}
+
+  //   const data: any = {};
+  //   data.image = image.filename;
+  //   data.target_url = createAdDto.target_url;
+  //   data.name = createAdDto.name;
+  //   data.ad_group_id = createAdDto.ad_group_id;
+
+  //   if(createAdDto.cities) {
+  //     // data.cities = createAdDto.cities;
+  //     createAdDto.cities.forEach(city => {
+  //       console.log(city)
+  //     })
+  //     // Array.from(createAdDto.cities).forEach(city => {
+  //     //   console.log(city)
+  //     // })
+  //   }
+
+
+
+  //   // create ad
+  //   const ad = await this.prisma.ad.create({
+  //     data,
+  //   })
+
+  //   if (ad.image) {
+  //     ad['image_url'] = SojebStorage.url(
+  //       appConfig().storageUrl.ads + ad.image,
+  //     )
+  //   }
+
+  //   return {
+  //     success: true,
+  //     message: "ad create successfully",
+  //     data: ad,
+  //   }
+  //   } catch (error) {
+  //     console.log(error)
+  //     return {
+  //       success: false,
+  //       message: "ad create failed",
+  //     }
+  //   }
+  // }
+
+  // async create(createAdDto: CreateAdDto, image: Express.Multer.File) {
+  //   try {
+  //     if (!image) return { success: false, message: "image is required" };
+  //     if (!createAdDto.target_url) return { success: false, message: "target url is required" };
+  //     if (!createAdDto.name) return { success: false, message: "name is required" };
+  //     if (!createAdDto.ad_group_id) return { success: false, message: "group id is required" };
+  
+  //     const adGroup = await this.prisma.adGroup.findUnique({
+  //       where: { id: createAdDto.ad_group_id },
+  //     });
+  //     if (!adGroup) return { success: false, message: "ad group not found" };
+  
+  //     const ad = await this.prisma.ad.create({
+  //       data: {
+  //         name: createAdDto.name,
+  //         target_url: createAdDto.target_url,
+  //         image: image.filename,
+  //         ad_group_id: createAdDto.ad_group_id,
+  //       },
+  //     });
+
+  //     console.log(createAdDto.cities)
+  
+  //     if (createAdDto.cities && Array.isArray(createAdDto.cities)) {
+  //       for (const city of createAdDto.cities) {
+  //         const existing = await this.prisma.city.findUnique({ where: { slug: city.slug } });
+  
+  //         let cityId: string;
+  
+  //         if (!existing) {
+  //           const result = await this.prisma.$queryRawUnsafe<any>(`
+  //             INSERT INTO cities (
+  //               id, name, slug, country, state, latitude, longitude,
+  //               location, boundary, created_at, updated_at
+  //             ) VALUES (
+  //               $7, $1, $2, $3, $4, $5, $6,
+  //               ST_SetSRID(ST_MakePoint($6, $5), 4326),
+  //               ST_SetSRID(ST_GeomFromGeoJSON($7), 4326),
+  //               NOW(), NOW()
+  //             )
+  //             RETURNING id
+  //           `, city.name, city.slug, city.country, city.state, city.latitude, city.longitude, JSON.stringify(city.boundary), cuid());
+  
+  //           cityId = result?.[0]?.id;
+  //         } else {
+  //           cityId = existing.id;
+  //         }
+  
+  //         await this.prisma.adCity.create({
+  //           data: {
+  //             ad_id: ad.id,
+  //             city_id: cityId,
+  //           },
+  //         });
+  //       }
+  //     }
+  
+  //     ad['image_url'] = SojebStorage.url(appConfig().storageUrl.ads + ad.image);
+  
+  //     return {
+  //       success: true,
+  //       message: "Ad created successfully",
+  //       data: ad,
+  //     };
+  //   } catch (error) {
+  //     console.error("Ad creation failed:", error);
+  //     return {
+  //       success: false,
+  //       message: "Ad creation failed",
+  //     };
+  //   }
+  // }
+
+
+
+async create(createAdDto: CreateAdDto, image: Express.Multer.File) {
+  try {
+    if (!image) return { success: false, message: "image is required" };
+    if (!createAdDto.target_url) return { success: false, message: "target url is required" };
+    if (!createAdDto.name) return { success: false, message: "name is required" };
+    if (!createAdDto.ad_group_id) return { success: false, message: "group id is required" };
+
     const adGroup = await this.prisma.adGroup.findUnique({
-      where: {
-        id: createAdDto.ad_group_id,
-      },
-    })
+      where: { id: createAdDto.ad_group_id },
+    });
+    if (!adGroup) return { success: false, message: "ad group not found" };
 
-    if (!adGroup) {
-      return {
-        success: false,
-        message: "ad group not found",
-    }}
-
-    const data: any = {};
-    data.image = image.filename;
-    data.target_url = createAdDto.target_url;
-    data.name = createAdDto.name;
-    data.ad_group_id = createAdDto.ad_group_id;
-
-    // create ad
     const ad = await this.prisma.ad.create({
-      data,
-    })
+      data: {
+        name: createAdDto.name,
+        target_url: createAdDto.target_url,
+        image: image.filename,
+        ad_group_id: createAdDto.ad_group_id,
+      },
+    });
 
-    if (ad.image) {
-      ad['image_url'] = SojebStorage.url(
-        appConfig().storageUrl.ads + ad.image,
-      )
+    if (createAdDto.cities && Array.isArray(createAdDto.cities)) {
+      for (const city of createAdDto.cities) {
+        const existingCity = await this.prisma.city.findUnique({
+          where: { slug: city.slug },
+        });
+
+        let cityId: string;
+
+        if (!existingCity) {
+          const newCityId = cuid();
+          const boundaryGeoJson = city.boundary
+            ? JSON.stringify({
+                type: 'Polygon',
+                coordinates: city.boundary.coordinates,
+              })
+            : null;
+
+          const query = `
+            INSERT INTO cities (
+              id, name, slug, country, state, latitude, longitude,
+              location, boundary, created_at, updated_at
+            )
+            VALUES (
+              $1, $2, $3, $4, $5, $6, $7,
+              ST_SetSRID(ST_MakePoint($7, $6), 4326),
+              ${boundaryGeoJson ? `ST_SetSRID(ST_GeomFromGeoJSON($8), 4326)` : 'NULL'},
+              NOW(), NOW()
+            )
+            RETURNING id
+          `;
+
+          const params = boundaryGeoJson
+            ? [newCityId, city.name, city.slug, city.country, city.state, city.latitude, city.longitude, boundaryGeoJson]
+            : [newCityId, city.name, city.slug, city.country, city.state, city.latitude, city.longitude];
+
+          const result = await this.prisma.$queryRawUnsafe<any>(query, ...params);
+
+          cityId = result?.[0]?.id;
+        } else {
+          cityId = existingCity.id;
+        }
+
+        await this.prisma.adCity.create({
+          data: {
+            ad_id: ad.id,
+            city_id: cityId,
+          },
+        });
+      }
     }
+
+    ad['image_url'] = SojebStorage.url(appConfig().storageUrl.ads + ad.image);
 
     return {
       success: true,
-      message: "ad create successfully",
+      message: "Ad created successfully",
       data: ad,
-    }
-    } catch (error) {
-      return {
-        success: false,
-        message: "ad create failed",
-      }
-    }
+    };
+  } catch (error) {
+    console.error("Ad creation failed:", error);
+    return {
+      success: false,
+      message: "Ad creation failed",
+    };
   }
+}
+
+  
+
+  // async createOrUpdateCity(city: {
+  //   name: string;
+  //   slug: string;
+  //   country: string;
+  //   state?: string;
+  //   latitude: number;
+  //   longitude: number;
+  //   boundary: {
+  //     type: 'Polygon';
+  //     coordinates: number[][][];
+  //   };
+  // }) {
+  //   try {
+  //     const { name, slug, country, state, latitude, longitude, boundary } = city;
+
+  //     const boundaryGeoJSON = JSON.stringify(boundary); // Valid GeoJSON string for ST_GeomFromGeoJSON
+
+  //     const result = await this.prisma.$executeRawUnsafe(`
+  //       INSERT INTO cities (
+  //         id, name, slug, country, state, latitude, longitude,
+  //         location, boundary, created_at, updated_at
+  //       )
+  //       VALUES (
+  //         gen_random_uuid(), $1, $2, $3, $4, $5, $6,
+  //         ST_SetSRID(ST_MakePoint($6, $5), 4326),
+  //         ST_SetSRID(ST_GeomFromGeoJSON($7), 4326),
+  //         NOW(), NOW()
+  //       )
+  //       ON CONFLICT (slug) DO UPDATE SET
+  //         name = EXCLUDED.name,
+  //         country = EXCLUDED.country,
+  //         state = EXCLUDED.state,
+  //         latitude = EXCLUDED.latitude,
+  //         longitude = EXCLUDED.longitude,
+  //         location = EXCLUDED.location,
+  //         boundary = EXCLUDED.boundary,
+  //         updated_at = NOW();
+  //     `, name, slug, country, state, latitude, longitude, boundaryGeoJSON);
+
+  //     return {
+  //       success: true,
+  //       message: 'City saved successfully',
+  //       data: result,
+  //     };
+  //   } catch (error) {
+  //     console.error('Error saving city:', error);
+  //     return {
+  //       success: false,
+  //       message: 'Failed to save city',
+  //     };
+  //   }
+  // }
+
 
   
 
@@ -106,39 +339,87 @@ export class AdsService {
     }
   }
 
+  // async findOne(id: string) {
+  //   try {
+  //     const ad = await this.prisma.ad.findUnique({
+  //       where: {
+  //         id: id,
+  //       },
+  //     });
+
+  //     if (!ad) {
+  //       return {
+  //         success: false,
+  //         message: "ad not found",
+  //       }
+  //     }
+
+  //   if(ad.image) {
+  //     ad['image_url'] = SojebStorage.url(
+  //       appConfig().storageUrl.ads + ad.image,
+  //     )
+    
+  //   }
+  //     return {
+  //       success: true,
+  //       message: "ad retrieve successfully", 
+  //       data: ad,
+  //     }
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: "ad retrieve failed",
+  //     }
+  //   }
+  // }
+
   async findOne(id: string) {
     try {
       const ad = await this.prisma.ad.findUnique({
-        where: {
-          id: id,
+        where: { id },
+        include: {
+          adCities: {
+            include: {
+              city: true,
+            },
+          },
+          ad_group: true, // Optional: Include this if you want ad group metadata too
         },
       });
-
+  
       if (!ad) {
         return {
           success: false,
-          message: "ad not found",
-        }
+          message: "Ad not found",
+        };
       }
-
-    if(ad.image) {
-      ad['image_url'] = SojebStorage.url(
-        appConfig().storageUrl.ads + ad.image,
-      )
-    
-    }
+  
+      // Attach image URL
+      const imageUrl = ad.image
+        ? SojebStorage.url(appConfig().storageUrl.ads + ad.image)
+        : null;
+  
+      // Extract city list
+      const cities = ad.adCities.map((adCity) => adCity.city);
+  
       return {
         success: true,
-        message: "ad retrieve successfully", 
-        data: ad,
-      }
+        message: "Ad retrieved successfully",
+        data: {
+          ...ad,
+          image_url: imageUrl,
+          cities, // Send full city metadata separately
+        },
+      };
     } catch (error) {
+      console.error("Ad fetch failed:", error);
       return {
         success: false,
-        message: "ad retrieve failed",
-      }
+        message: "Ad retrieve failed",
+      };
     }
   }
+  
 
   async update(id: string, updateAdDto: UpdateAdDto, image: Express.Multer.File) {
     try {
@@ -262,7 +543,13 @@ export class AdsService {
         if (image) data.image = image.filename;
         if (createSidebarAdDto.target_url) data.target_url = createSidebarAdDto.target_url;
         if(createSidebarAdDto.active == true || createSidebarAdDto.active == false) data.active = createSidebarAdDto.active;
-        
+
+        if(createSidebarAdDto?.target_url && (sidebarTop?.target_url !== createSidebarAdDto.target_url)){
+          data.views = 0;
+          data.clicks = 0;
+        }
+
+
         const updateSidebarTop = await this.prisma.sideBarAd.update({
           where: {
             id: sidebarTop.id,
@@ -384,6 +671,11 @@ export class AdsService {
         if (image) data.image = image.filename;
         if (createSidebarAdDto.target_url) data.target_url = createSidebarAdDto.target_url;
         if(createSidebarAdDto.active == true || createSidebarAdDto.active == false) data.active = createSidebarAdDto.active;
+
+        if(createSidebarAdDto?.target_url && (sidebarBottom?.target_url !== createSidebarAdDto.target_url)){
+          data.views = 0;
+          data.clicks = 0;
+        }
         
         const updateSidebarBottom = await this.prisma.sideBarAd.update({
           where: {
@@ -481,5 +773,138 @@ export class AdsService {
       }
     }
   }
+
+
+  // async createBulkAds(ads: any[]) {
+  //   try {
+  //     for (const ad of ads) {
+  //       const adId = cuid();
+
+  //       // Insert the ad
+  //       await this.prisma.ad.create({
+  //         data: {
+  //           id: adId,
+  //           name: ad.name,
+  //           target_url: ad.target_url,
+  //           image: ad.image,
+  //           active: ad.active ?? true,
+  //           ad_group_id: ad.ad_group_id,
+  //           views: ad.views ?? 0,
+  //           clicks: ad.clicks ?? 0,
+  //           created_at: new Date(ad.created_at || Date.now()),
+  //           updated_at: new Date(ad.updated_at || Date.now()),
+  //         },
+  //       });
+
+  //       // Ensure city exists before linking
+  //       for (const city of ad.cities) {
+  //         let existingCity = await this.prisma.city.findUnique({
+  //           where: { id: city.id },
+  //         });
+
+  //         if (!existingCity) {
+  //           existingCity = await this.prisma.city.create({
+  //             data: {
+  //               id: city.id,
+  //               name: city.name,
+  //               // slug: city.name.toLowerCase().replace(/\s+/g, '-'),
+  //               country: city.country || 'USA',
+  //               latitude: city.latitude,
+  //               longitude: city.longitude,
+  //             },
+  //           });
+  //         }
+
+  //         // Link ad to city
+  //         await this.prisma.adCity.create({
+  //           data: {
+  //             ad_id: adId,
+  //             city_id: existingCity.id,
+  //           },
+  //         });
+  //       }
+  //     }
+
+  //     return { success: true, count: ads.length };
+  //   } catch (error) {
+  //     console.error('🚨 Bulk Ad Insert Error:', error);
+  //     return {
+  //       success: false,
+  //       message: 'Failed to insert ads',
+  //       error: error.message,
+  //     };
+  //   }
+  // }
+
+
+  async createBulkAds(ads: any[]) {
+    try {
+      for (const ad of ads) {
+        const adId = cuid();
+
+        // ✅ Insert the ad
+        await this.prisma.ad.create({
+          data: {
+            id: adId,
+            name: ad.name,
+            target_url: ad.target_url,
+            image: ad.image,
+            active: ad.active ?? true,
+            ad_group_id: ad.ad_group_id,
+            views: ad.views ?? 0,
+            clicks: ad.clicks ?? 0,
+            created_at: new Date(ad.created_at || Date.now()),
+            updated_at: new Date(ad.updated_at || Date.now()),
+          },
+        });
+
+        // ✅ Ensure city exists before linking
+        for (const city of ad.cities) {
+          const existingCity = await this.prisma.city.findUnique({
+            where: { id: city.id },
+          });
+
+          if (!existingCity) {
+            // Use raw SQL to insert city with PostGIS location
+            await this.prisma.$executeRawUnsafe(`
+              INSERT INTO "cities" (
+                id, name, slug, country, latitude, longitude, location,
+                created_at, updated_at
+              )
+              VALUES (
+                '${city.id}',
+                '${city.name.replace(/'/g, "''")}',
+                '${city.name.toLowerCase().replace(/\s+/g, '-')}',
+                '${city.country || 'USA'}',
+                ${city.latitude},
+                ${city.longitude},
+                ST_SetSRID(ST_MakePoint(${city.longitude}, ${city.latitude}), 4326),
+                NOW(), NOW()
+              )
+            `);
+          }
+
+          // ✅ Link ad to city
+          await this.prisma.adCity.create({
+            data: {
+              ad_id: adId,
+              city_id: city.id,
+            },
+          });
+        }
+      }
+
+      return { success: true, count: ads.length };
+    } catch (error) {
+      console.error('🚨 Bulk Ad Insert Error:', error);
+      return {
+        success: false,
+        message: 'Failed to insert ads',
+        error: error.message,
+      };
+    }
+  }
+
+
 
 }

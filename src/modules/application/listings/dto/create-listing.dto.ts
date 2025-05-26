@@ -41,6 +41,11 @@ import { DisplayPageType } from 'src/common/enum/display-page-type.enum';
     @IsLongitude()
     lng: number;
 
+    @IsNotEmpty()
+    @IsOptional()
+    @IsString()
+    address?: string;
+
     @IsOptional()
     @IsBoolean()
     // @Type(() => Boolean)

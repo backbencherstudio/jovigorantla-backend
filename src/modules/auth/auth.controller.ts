@@ -28,7 +28,7 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @ApiOperation({ summary: 'Get user details' })
   @ApiBearerAuth()
@@ -184,7 +184,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Login user' })
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Req() req: Request,  @Res({ passthrough: true }) res: Response) {
+  async login(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     try {
       const user_id = req?.user?.id;
 
@@ -225,7 +225,7 @@ export class AuthController {
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleLogin(): Promise<any> {
-    return HttpStatus.OK;
+    // return HttpStatus.OK;
   }
 
   @Get('google/redirect')
@@ -247,7 +247,7 @@ export class AuthController {
           sameSite: 'lax',
           maxAge: 24 * 60 * 60 * 1000 * 30, // 30 day
         });
-  
+
         // Redirect to client without query params
         return res.redirect(`${appConfig().app.client_app_url}`)
         // return {
@@ -277,6 +277,37 @@ export class AuthController {
       };
     }
   }
+
+  // @Get('google/redirect')
+  // @UseGuards(AuthGuard('google'))
+  // async googleLoginRedirect(
+  //   @Req() req: Request,
+  //   @Res() res: Response,
+  // ): Promise<any> {
+  //   try {
+  //     const user = req.user as any; // Or use a DTO/interface
+  //     const email = user.email;
+  //     const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+
+  //     const response = await this.authService.googleLogin(email, name);
+
+  //     if (response.success) {
+  //       res.cookie('jwt', response.token, {
+  //         httpOnly: true,
+  //         secure: process.env.NODE_ENV === 'production',
+  //         sameSite: 'lax',
+  //         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+  //       });
+
+  //       return res.redirect(appConfig().app.client_app_url); // ✅ Final redirect
+  //     }
+
+  //     return res.redirect(`${appConfig().app.client_app_url}/login?error=google_failed`);
+  //   } catch (error) {
+  //     return res.redirect(`${appConfig().app.client_app_url}/login?error=exception`);
+  //   }
+  // }
+
 
   // update user
   @ApiOperation({ summary: 'Update user' })
@@ -406,7 +437,7 @@ export class AuthController {
       });
     } catch (error) {
       console.log(error);
-      
+
       return {
         success: false,
         message: 'Something went wrong',

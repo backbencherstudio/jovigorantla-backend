@@ -15,7 +15,40 @@ import { RolesGuard } from 'src/common/guard/role/roles.guard';
 @Roles(Role.ADMIN)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AdsController {
-  constructor(private readonly adsService: AdsService) {}
+  constructor(private readonly adsService: AdsService) { }
+
+  // @Post()
+  // @UseInterceptors(
+  //   FileInterceptor('image', {
+  //     storage: diskStorage({
+  //       destination:
+  //         appConfig().storageUrl.rootUrl + appConfig().storageUrl.ads,
+  //       filename: (req, file, cb) => {
+  //         const randomName = Array(32)
+  //           .fill(null)
+  //           .map(() => Math.round(Math.random() * 16).toString(16))
+  //           .join('');
+  //         return cb(
+  //           null,
+  //           `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
+  //         );
+  //       },
+  //     }),
+  //     limits: {
+  //       fileSize: 5 * 1024 * 1024, // 5MB in bytes
+  //     },
+  //   }),
+  // )
+  // async create(@Body() createAdDto: CreateAdDto, @UploadedFile() image: Express.Multer.File) {
+  //   try {
+  //     return await this.adsService.create(createAdDto, image);
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: "ads create failed",
+  //     }
+  //   }
+  // }
 
   @Post()
   @UseInterceptors(
@@ -39,14 +72,25 @@ export class AdsController {
       },
     }),
   )
-  async create(@Body() createAdDto: CreateAdDto, @UploadedFile() image: Express.Multer.File) {
+  async createAd(
+    @UploadedFile() image: Express.Multer.File,
+    @Body() body: any,
+  ) {
     try {
-      return await this.adsService.create(createAdDto, image);
+      const createAdDto: CreateAdDto = {
+        name: body.name,
+        target_url: body.target_url,
+        ad_group_id: body.ad_group_id,
+        cities: body.cities ? JSON.parse(body.cities) : [], // ✅ Fix is here
+      };
+
+      return this.adsService.create(createAdDto, image);
     } catch (error) {
       return {
         success: false,
-        message: "ads create failed",
-      }
+        message: 'Failed to parse ad data',
+        error,
+      };
     }
   }
 
@@ -190,14 +234,14 @@ export class AdsController {
     }),
   )
   async update(@Param('id') id: string, @Body() updateAdDto: UpdateAdDto, @UploadedFile() image: Express.Multer.File) {
-   try {
-     return await this.adsService.update(id, updateAdDto, image);
-   } catch (error) {
-     return {
-       success: false,
-       message: "ads update failed",
-     }
-   }
+    try {
+      return await this.adsService.update(id, updateAdDto, image);
+    } catch (error) {
+      return {
+        success: false,
+        message: "ads update failed",
+      }
+    }
   }
 
   @Delete(':id')
@@ -210,5 +254,10 @@ export class AdsController {
         message: "ads delete failed",
       }
     }
+  }
+
+  @Post('bulk')
+  async createBulkAds(@Body() ads: any[]) {
+    return this.adsService.createBulkAds(ads);
   }
 }

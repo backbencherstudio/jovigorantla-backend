@@ -72,6 +72,7 @@ model User {
   ucodes                    Ucode[]
   user_payment_methods      UserPaymentMethod[]
   user_settings             UserSetting[]
+  reports Report[]
 
   @@map("users")
 }
@@ -373,21 +374,49 @@ model Listing {
   latitude               Float?
   longitude              Float?
   post_to_usa            Boolean                  @default(false)
-  flagged_listing_status ListingStatus            @default(PENDING)
+  flagged_listing_status ListingStatus            @default(APPROVED)
   usa_listing_status     ListingStatus?
   user_id                String
   created_at             DateTime                 @default(now())
   updated_at             DateTime                 @updatedAt
   location               Unsupported("geometry")?
+  address                String?
   favorites              Favorite[]
   user                   User                     @relation(fields: [user_id], references: [id])
   Conversation            Conversation[]
+  reports Report[]
 
   @@index([post_to_usa])
   @@index([flagged_listing_status])
   @@index([usa_listing_status])
   @@map("listings")
 }
+
+enum ReportStatus {
+  PENDING
+  APPROVED     // Report is valid, and approved for action
+  BLOCKED      // Reported listing has been blocked
+  DELETED      // Reported listing has been deleted
+}
+
+model Report {
+  id          String        @id @default(cuid())
+  reason      String?
+  message     String?       // Optional user input
+  status      ReportStatus  @default(PENDING)
+  user_id     String
+  listing_id  String
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+
+  user        User          @relation(fields: [user_id], references: [id])
+  listing     Listing       @relation(fields: [listing_id], references: [id])
+
+  @@index([status])
+  @@index([listing_id])
+  @@map("reports")
+}
+
 
 model AdGroup {
   id            String            @id @default(cuid())
@@ -416,9 +445,42 @@ model Ad {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   ad_group    AdGroup  @relation(fields: [ad_group_id], references: [id], onDelete: Cascade)
+  adCities    AdCity[]  
 
   @@map("ads")
 }
+
+model City {
+  id         String     @id @default(cuid())
+  name       String     
+  slug       String?     @unique
+  state      String?
+  country    String
+  latitude   Float?
+  longitude  Float?
+  location   Unsupported("geometry")?
+  boundary   Unsupported("geometry")?   // ✅ NEW: for polygon boundary
+  active     Boolean    @default(true)
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+
+  adCities   AdCity[]   
+
+  @@map("cities")
+}
+
+
+model AdCity {
+  ad_id   String
+  city_id String
+
+  ad      Ad    @relation(fields: [ad_id], references: [id], onDelete: Cascade)
+  city    City  @relation(fields: [city_id], references: [id], onDelete: Cascade)
+
+  @@id([ad_id, city_id])
+  @@map("ad_cities")
+}
+
 
 model SideBarAd {
   id         String        @id @default(cuid())

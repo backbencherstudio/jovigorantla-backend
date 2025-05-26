@@ -2,6 +2,9 @@
 CREATE EXTENSION IF NOT EXISTS "postgis";
 
 -- CreateEnum
+CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'APPROVED', 'BLOCKED', 'DELETED');
+
+-- CreateEnum
 CREATE TYPE "MessageStatus" AS ENUM ('PENDING', 'SENT', 'DELIVERED', 'READ');
 
 -- CreateEnum
@@ -352,14 +355,29 @@ CREATE TABLE "listings" (
     "latitude" DOUBLE PRECISION,
     "longitude" DOUBLE PRECISION,
     "post_to_usa" BOOLEAN NOT NULL DEFAULT false,
-    "flagged_listing_status" "ListingStatus" NOT NULL DEFAULT 'PENDING',
+    "flagged_listing_status" "ListingStatus" NOT NULL DEFAULT 'APPROVED',
     "usa_listing_status" "ListingStatus",
     "user_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "location" geometry,
+    "city" TEXT,
 
     CONSTRAINT "listings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "reports" (
+    "id" TEXT NOT NULL,
+    "reason" TEXT,
+    "message" TEXT,
+    "status" "ReportStatus" NOT NULL DEFAULT 'PENDING',
+    "user_id" TEXT NOT NULL,
+    "listing_id" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "reports_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -391,6 +409,30 @@ CREATE TABLE "ads" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "ads_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "cities" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "state" TEXT,
+    "country" TEXT NOT NULL,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
+    "active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "cities_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ad_cities" (
+    "ad_id" TEXT NOT NULL,
+    "city_id" TEXT NOT NULL,
+
+    CONSTRAINT "ad_cities_pkey" PRIMARY KEY ("ad_id","city_id")
 );
 
 -- CreateTable
@@ -468,6 +510,18 @@ CREATE INDEX "listings_flagged_listing_status_idx" ON "listings"("flagged_listin
 CREATE INDEX "listings_usa_listing_status_idx" ON "listings"("usa_listing_status");
 
 -- CreateIndex
+CREATE INDEX "reports_status_idx" ON "reports"("status");
+
+-- CreateIndex
+CREATE INDEX "reports_listing_id_idx" ON "reports"("listing_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cities_name_key" ON "cities"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cities_slug_key" ON "cities"("slug");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "favorites_user_id_listing_id_key" ON "favorites"("user_id", "listing_id");
 
 -- CreateIndex
@@ -543,7 +597,19 @@ ALTER TABLE "user_settings" ADD CONSTRAINT "user_settings_user_id_fkey" FOREIGN 
 ALTER TABLE "listings" ADD CONSTRAINT "listings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "reports" ADD CONSTRAINT "reports_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "reports" ADD CONSTRAINT "reports_listing_id_fkey" FOREIGN KEY ("listing_id") REFERENCES "listings"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ads" ADD CONSTRAINT "ads_ad_group_id_fkey" FOREIGN KEY ("ad_group_id") REFERENCES "ad_groups"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ad_cities" ADD CONSTRAINT "ad_cities_ad_id_fkey" FOREIGN KEY ("ad_id") REFERENCES "ads"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ad_cities" ADD CONSTRAINT "ad_cities_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "cities"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "favorites" ADD CONSTRAINT "favorites_listing_id_fkey" FOREIGN KEY ("listing_id") REFERENCES "listings"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

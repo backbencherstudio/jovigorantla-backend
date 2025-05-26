@@ -31,7 +31,7 @@ async function bootstrap() {
   // set cookie parser
   app.use(cookieParser());
   app.enableCors({
-    origin: process.env.CLIENT_URL,
+    origin: [process.env.CLIENT_URL, 'http://192.168.5.8:8080',  'http://192.168.4.42:8080'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
@@ -89,6 +89,6 @@ async function bootstrap() {
   // end swagger
 
  
-  await app.listen(process.env.PORT ?? 5000, '0.0.0.0');
+  await app.listen(process.env.PORT ?? 4000, '0.0.0.0');
 }
 bootstrap();
