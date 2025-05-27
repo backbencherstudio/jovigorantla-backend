@@ -7,6 +7,7 @@ import {
   Delete,
   UseGuards,
   Req,
+  Patch,
 } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -16,13 +17,21 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Role } from 'src/common/guard/role/role.enum';
 import { Roles } from 'src/common/guard/role/roles.decorator';
 import { Request } from 'express';
+import { ReqUser } from 'src/common/req-user.decorator';
 
 @ApiBearerAuth()
 @ApiTags('Conversation')
 @UseGuards(JwtAuthGuard)
 @Controller('chat/conversation')
 export class ConversationController {
-  constructor(private readonly conversationService: ConversationService) {}
+  constructor(private readonly conversationService: ConversationService) { }
+
+  @Post('test')
+  test() {
+    this.conversationService.test();
+    return 'test';
+  }
+
 
   @ApiOperation({ summary: 'Create conversation' })
   @Post()
@@ -47,6 +56,26 @@ export class ConversationController {
     try {
       const conversations = await this.conversationService.findAll(req?.user?.userId);
       return conversations;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  @Patch('conversations/:id/read')
+  async markAsRead(
+    @Param('id') conversationId: string,
+    @Req() req: Request, // Replace with your decorator to get auth user
+  ) {
+    try {
+      const userId = req?.user?.userId; // Replace with your decorator to get auth user
+      const conversation = await this.conversationService.markConversationAsRead(
+        conversationId,
+        userId,
+      );
+      return conversation;
     } catch (error) {
       return {
         success: false,
@@ -83,4 +112,7 @@ export class ConversationController {
       };
     }
   }
+
+
+
 }

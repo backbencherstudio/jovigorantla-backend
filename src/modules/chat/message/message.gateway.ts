@@ -11,6 +11,8 @@ import { Server, Socket } from 'socket.io';
 import { OnModuleInit } from '@nestjs/common';
 import { MessageStatus } from '@prisma/client';
 import * as jwt from 'jsonwebtoken';
+import * as cookie from 'cookie';
+
 import appConfig from '../../../config/app.config';
 import { ChatRepository } from 'src/common/repository/chat/chat.repository';
 
@@ -21,49 +23,86 @@ import { ChatRepository } from 'src/common/repository/chat/chat.repository';
 })
 export class MessageGateway
   implements
-    OnGatewayInit,
-    OnGatewayConnection,
-    OnGatewayDisconnect,
-    OnModuleInit
-{
+  OnGatewayInit,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  OnModuleInit {
   @WebSocketServer()
   server: Server;
 
-  constructor() {}
+  constructor() { }
 
   // Map to store connected clients
   public clients = new Map<string, string>(); // userId -> socketId
   private activeUsers = new Map<string, string>(); // username -> socketId
 
-  onModuleInit() {}
+  onModuleInit() { }
 
   afterInit(server: Server) {
     console.log('Websocket server started');
   }
 
   // implement jwt token validation
-  async handleConnection(client: Socket, ...args: any[]) {
-    try {
-      // const token = client.handshake.headers.authorization?.split(' ')[1];
-      const token = client.handshake.auth.token;
-      if (!token) {
-        client.disconnect();
-        console.log('No token provided');
-        return;
-      }
+  // async handleConnection(client: Socket, ...args: any[]) {
+  //   try {
+  //     // const token = client.handshake.headers.authorization?.split(' ')[1];
+  //     const token = client.handshake.auth.token;
+  //     if (!token) {
+  //       client.disconnect();
+  //       console.log('No token provided');
+  //       return;
+  //     }
 
+  //     const decoded: any = jwt.verify(token, appConfig().jwt.secret);
+  //     // const decoded: any = this.jwtService.verify(token);
+  //     // const userId = client.handshake.query.userId as string;
+  //     const userId = decoded.sub;
+  //     if (!userId) {
+  //       client.disconnect();
+  //       console.log('Invalid token');
+  //       return;
+  //     }
+
+  //     this.clients.set(userId, client.id);
+  //     // console.log(`User ${userId} connected with socket ${client.id}`);
+  //     await ChatRepository.updateUserStatus(userId, 'online');
+  //     // notify the user that the user is online
+  //     this.server.emit('userStatusChange', {
+  //       user_id: userId,
+  //       status: 'online',
+  //     });
+
+  //     console.log(`User ${userId} connected`);
+  //   } catch (error) {
+  //     client.disconnect();
+  //     console.error('Error handling connection:', error);
+  //   }
+  // }
+
+  async handleConnection(client: Socket) {
+    const rawCookie = client.handshake.headers.cookie;
+
+    if (!rawCookie) {
+      client.disconnect();
+      return;
+    }
+
+    const cookies = cookie.parse(rawCookie);
+    const token = cookies['jwt']; // e.g., access_token
+
+    if (!token) {
+      client.disconnect();
+      return;
+    }
+
+    try {
       const decoded: any = jwt.verify(token, appConfig().jwt.secret);
-      // const decoded: any = this.jwtService.verify(token);
-      // const userId = client.handshake.query.userId as string;
       const userId = decoded.sub;
-      if (!userId) {
-        client.disconnect();
-        console.log('Invalid token');
-        return;
-      }
 
       this.clients.set(userId, client.id);
-      // console.log(`User ${userId} connected with socket ${client.id}`);
+      // console.log(`WebSocket authenticated as user ${userId}`);
+      // Continue setting online status, etc.
+
       await ChatRepository.updateUserStatus(userId, 'online');
       // notify the user that the user is online
       this.server.emit('userStatusChange', {
@@ -71,10 +110,10 @@ export class MessageGateway
         status: 'online',
       });
 
-      console.log(`User ${userId} connected`);
-    } catch (error) {
+      // console.log(`User ${userId} connected`);
+    } catch (err) {
+      console.error('Invalid JWT in socket:', err);
       client.disconnect();
-      console.error('Error handling connection:', error);
     }
   }
 
@@ -93,12 +132,34 @@ export class MessageGateway
 
       console.log(`User ${userId} disconnected`);
     }
+
+    console.log(`sojeb User ${userId} disconnected`);
+
+  }
+
+  @SubscribeMessage('read_messages')
+  async handleReadMessages(
+    client: Socket,
+    @MessageBody() body: { conversationId: string; userId: string }
+  ) {
+    const unreadMessages = await ChatRepository.markMessagesAsRead(
+      body.conversationId,
+      body.userId,
+    );
+
+    // Notify each message sender
+    for (const msg of unreadMessages) {
+      this.emitMessageRead(msg.sender_id, {
+        conversationId: body.conversationId,
+        messageId: msg.id,
+      });
+    }
   }
 
   @SubscribeMessage('joinRoom')
   handleRoomJoin(client: Socket, body: { room_id: string }) {
     const roomId = body.room_id;
-
+    // console.log(`User ${client.id} joined room ${roomId}`);
     client.join(roomId); // join the room using user_id
     client.emit('joinedRoom', { room_id: roomId });
   }
@@ -210,4 +271,59 @@ export class MessageGateway
       this.server.to(receiverSocketId).emit('callEnded');
     }
   }
+
+  emitMessageRead(toUserId: string, data: { conversationId: string; messageId: string }) {
+    const socketId = this.clients.get(toUserId);
+    if (socketId) {
+      this.server.to(socketId).emit('message_read', data);
+    }
+  }
 }
+
+// import {
+//   SubscribeMessage,
+//   WebSocketGateway,
+//   WebSocketServer,
+//   OnGatewayConnection,
+//   OnGatewayDisconnect,
+// } from '@nestjs/websockets';
+// import { Server, Socket } from 'socket.io';
+// import { Logger } from '@nestjs/common';
+
+// @WebSocketGateway({
+//   cors: {
+//     origin: '*', // Update with frontend origin in production
+//   },
+// })
+// export class MessageGateway implements OnGatewayConnection, OnGatewayDisconnect {
+//   @WebSocketServer()
+//   server: Server;
+
+//   private logger: Logger = new Logger('MessageGateway');
+//   private connectedUsers: Map<string, string> = new Map(); // userId -> socketId
+
+//   handleConnection(client: Socket) {
+//     const userId = client.handshake.query.userId as string;
+//     if (userId) {
+//       this.connectedUsers.set(userId, client.id);
+//       this.logger.log(`User connected: ${userId}`);
+//     }
+//   }
+
+//   handleDisconnect(client: Socket) {
+//     for (const [userId, socketId] of this.connectedUsers) {
+//       if (socketId === client.id) {
+//         this.connectedUsers.delete(userId);
+//         this.logger.log(`User disconnected: ${userId}`);
+//         break;
+//       }
+//     }
+//   }
+
+//   emitMessageRead(toUserId: string, data: { conversationId: string; messageId: string }) {
+//     const socketId = this.connectedUsers.get(toUserId);
+//     if (socketId) {
+//       this.server.to(socketId).emit('message_read', data);
+//     }
+//   }
+// }

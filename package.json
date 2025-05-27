@@ -44,6 +44,7 @@
     "bullmq": "5.48.1",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.1",
+    "cookie": "^1.0.2",
     "cookie-parser": "^1.4.7",
     "cross-env": "7.0.3",
     "cuid": "^3.0.0",

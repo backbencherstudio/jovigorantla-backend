@@ -854,7 +854,8 @@ export class ListingsService {
       include: {
         user: {
           select: {
-            name: true
+            name: true,
+            id: true
           }
         }
       }

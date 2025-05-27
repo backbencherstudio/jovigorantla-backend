@@ -51,4 +51,44 @@ export class ChatRepository {
       },
     });
   }
+
+
+    /**
+   * Mark all unread messages in a conversation as read
+   */
+  static async markMessagesAsRead(conversationId: string, userId: string) {
+    // Get unread messages for this user in this conversation
+    const unreadMessages = await prisma.message.findMany({
+      where: {
+        conversation_id: conversationId,
+        receiver_id: userId,
+        status: MessageStatus.PENDING, // or .SENT if you're using both
+      },
+      select: {
+        id: true,
+        sender_id: true,
+      },
+    });
+
+    if (!unreadMessages.length) {
+      return [];
+    }
+
+    const messageIds = unreadMessages.map((msg) => msg.id);
+
+    // Update them all as READ
+    await prisma.message.updateMany({
+      where: {
+        id: {
+          in: messageIds,
+        },
+      },
+      data: {
+        status: MessageStatus.READ,
+      },
+    });
+
+    return unreadMessages; // Needed for emitting `message_read`
+  }
+
 }

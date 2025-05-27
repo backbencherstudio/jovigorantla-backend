@@ -227,6 +227,7 @@ model Message {
   conversation_id String?
   attachment_id   String?
   message         String?
+  is_read         Boolean?       @default(false)
   attachment      Attachment?    @relation(fields: [attachment_id], references: [id])
   conversation    Conversation?  @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
   receiver        User?          @relation("receiver", fields: [receiver_id], references: [id])
