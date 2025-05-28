@@ -57,6 +57,10 @@ export class MessageController {
             data: messageData,
           });
 
+          console.log('emit message', user_id, createMessageDto.receiver_id, messageData)
+
+          
+
       return {
         success: message.success,
         message: message.message,

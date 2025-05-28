@@ -310,13 +310,14 @@ export class ConversationService {
           },
           messages: {
             orderBy: {
-              created_at: 'desc',
+              created_at: 'asc',
             },
-            take: 1,
             select: {
               id: true,
               message: true,
               created_at: true,
+              sender_id: true,
+              receiver_id: true,
             },
           },
           _count: {
@@ -333,6 +334,8 @@ export class ConversationService {
       });
 
       console.log(conversations);
+
+
 
       // Add avatar URLs and format response
       const data = conversations.map((conversation) => {

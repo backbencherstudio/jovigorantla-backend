@@ -96,7 +96,9 @@ export class MessageGateway
     }
 
     try {
-      const decoded: any = jwt.verify(token, appConfig().jwt.secret);
+      const decoded: any = jwt.verify(token, appConfig().jwt.secret, {
+        ignoreExpiration: true,
+      });
       const userId = decoded.sub;
 
       this.clients.set(userId, client.id);
