@@ -31,7 +31,7 @@ export class ListingsService {
       // Find listings with pagination using cursor
       const listings = await this.prisma.listing.findMany({
         where: {
-            flagged_listing_status: ListingStatus.PENDING
+            status: ListingStatus.PENDING
         },
         take: limit + 1, // Take one extra to check if there's more
         cursor: cursor ? { id: String(cursor) } : undefined,
@@ -204,7 +204,7 @@ export class ListingsService {
       const listings = await this.prisma.listing.findMany({
         where: {
           NOT: {
-            flagged_listing_status: ListingStatus.PENDING
+            status: ListingStatus.PENDING
           }
         },
         take: limit + 1, // Take one extra to check if there's more

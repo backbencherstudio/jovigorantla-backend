@@ -271,7 +271,7 @@ export class ConversationService {
 
   async findAll(user_id: string) {
     try {
-      console.log(user_id)
+      // console.log(user_id)
       const conversations = await this.prisma.conversation.findMany({
         where: {
           OR: [
@@ -318,6 +318,7 @@ export class ConversationService {
               created_at: true,
               sender_id: true,
               receiver_id: true,
+              is_read: true,
             },
           },
           _count: {
@@ -333,7 +334,7 @@ export class ConversationService {
         },
       });
 
-      console.log(conversations);
+      // console.log(conversations);
 
 
 
@@ -533,10 +534,10 @@ export class ConversationService {
       return {
         success: true,
         message: "Conversation marked as read",
-        data: {
-          conversation_id: conversationId,
-          user_id: userId,
-        }
+        // data: {
+        //   conversation_id: conversationId,
+        //   user_id: userId,
+        // }
       }
 
     } catch (error) {

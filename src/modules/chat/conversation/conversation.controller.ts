@@ -64,7 +64,7 @@ export class ConversationController {
     }
   }
 
-  @Patch('conversations/:id/read')
+  @Patch(':id/read')
   async markAsRead(
     @Param('id') conversationId: string,
     @Req() req: Request, // Replace with your decorator to get auth user

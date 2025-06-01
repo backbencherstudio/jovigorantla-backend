@@ -372,23 +372,25 @@ model Listing {
   description            String?
   image                  String?
   slug                   String?                  @unique
-  latitude               Float?
-  longitude              Float?
+ 
   post_to_usa            Boolean                  @default(false)
-  flagged_listing_status ListingStatus            @default(APPROVED)
-  usa_listing_status     ListingStatus?
-  user_id                String
+  status ListingStatus                            @default(APPROVED)
+  usa_listing_status     ListingStatus?            @default(PENDING)
+
+
   created_at             DateTime                 @default(now())
   updated_at             DateTime                 @updatedAt
-  location               Unsupported("geometry")?
-  address                String?
+
+  // address                String?
   favorites              Favorite[]
+  user_id                String
   user                   User                     @relation(fields: [user_id], references: [id])
-  Conversation            Conversation[]
-  reports Report[]
+  Conversation           Conversation[]
+  reports                Report[]
+  cities                 City[]               @relation("ListingCities")
 
   @@index([post_to_usa])
-  @@index([flagged_listing_status])
+  @@index([status])
   @@index([usa_listing_status])
   @@map("listings")
 }
@@ -400,11 +402,18 @@ enum ReportStatus {
   DELETED      // Reported listing has been deleted
 }
 
+enum ReportType {
+  NORMAL
+  POST_TO_USA
+}
+
 model Report {
   id          String        @id @default(cuid())
   reason      String?
   message     String?       // Optional user input
   status      ReportStatus  @default(PENDING)
+  
+  report_type ReportType    @default(NORMAL)
   user_id     String
   listing_id  String
   created_at  DateTime      @default(now())
@@ -453,19 +462,16 @@ model Ad {
 
 model City {
   id         String     @id @default(cuid())
-  name       String     
-  slug       String?     @unique
-  state      String?
-  country    String
-  latitude   Float?
-  longitude  Float?
+  address       String     
+  latitude   Float
+  longitude  Float
   location   Unsupported("geometry")?
-  boundary   Unsupported("geometry")?   // ✅ NEW: for polygon boundary
-  active     Boolean    @default(true)
+  // boundary   Unsupported("geometry")?   // ✅ NEW: for polygon boundary
   created_at DateTime   @default(now())
   updated_at DateTime   @updatedAt
 
-  adCities   AdCity[]   
+  adCities   AdCity[]
+  listings    Listing[]   @relation("ListingCities")
 
   @@map("cities")
 }

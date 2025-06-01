@@ -42,9 +42,10 @@ export class ListingsController {
       }
     ),
   )
-  async create(@Req() req: Request, @Body() createListingDto: CreateListingDto, @UploadedFile() image: Express.Multer.File) {
+  async create(@Req() req: Request, @Body() createListingDto: any, @UploadedFile() image: Express.Multer.File) {
     try {
       createListingDto.user_id = req.user.userId;
+      createListingDto.cities = JSON.parse(createListingDto.cities);
       return await this.listingsService.create(createListingDto, image);;
     } catch (error) {
       return {
@@ -55,97 +56,119 @@ export class ListingsController {
   }
 
   @Public()
-  @Get('nearby')
-  async getNearbyListings(
+  @Get("nearby")
+  async getNearByListings(
     @Query() nearByDto: NearbyListingsQueryDto
   ) {
     try {
-      return await this.listingsService.getNearbyListings(nearByDto);
+
+      // Example usage
+      const lat = 40.7128; // Latitude for New York
+      const lng = -74.006; // Longitude for New York
+      const radius = 5; // 5miles radius
+
+      return await this.listingsService.findNearbyListings(lat, lng, radius);
     } catch (error) {
       // console.log(error);
       return {
         success: false,
         message: 'Failed to get nearby listings',
       }
-    }
+    } 
   }
 
+  // @Public()
+  // @Get('nearby')
+  // async getNearbyListings(
+  //   @Query() nearByDto: NearbyListingsQueryDto
+  // ) {
+  //   try {
+  //     return await this.listingsService.getNearbyListings(nearByDto);
+  //   } catch (error) {
+  //     // console.log(error);
+  //     return {
+  //       success: false,
+  //       message: 'Failed to get nearby listings',
+  //     }
+  //   }
+  // }
 
-  @Get()
-  async findAll(@Req() req: Request, @Query() findAllQueryDto: FindAllQueryDto) {
-    try {
-      return await this.listingsService.findAll(req?.user?.userId, findAllQueryDto);
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to get listings',
-      }
-    }
-  }
 
-  @Public()
-  @Get(':idOrSlug')
-  async findOne(@Param('idOrSlug') idOrSlug: string) {
-    try {
-      return await this.listingsService.findOne(idOrSlug);
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to get listing',
-      }
-    }
-  }
+  // @Get()
+  // async findAll(@Req() req: Request, @Query() findAllQueryDto: FindAllQueryDto) {
+  //   try {
+  //     return await this.listingsService.findAll(req?.user?.userId, findAllQueryDto);
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: 'Failed to get listings',
+  //     }
+  //   }
+  // }
 
-  @Patch(':id')
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination:
-          appConfig().storageUrl.rootUrl + appConfig().storageUrl.listing,
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          return cb(
-            null,
-            `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
-          );
-        },
-      }),
-      limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB in bytes
-      },
-    }),
-  )
-  async update(@Param('id') id: string, @Body() updateListingDto: UpdateListingDto, @UploadedFile() image: Express.Multer.File, @Req() req: Request) {
-    try {
-      updateListingDto.user_id = req?.user?.userId || "";
-      return await this.listingsService.update(id, updateListingDto, image);
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to update listing',
-      }
-    }
-  }
+  // @Public()
+  // @Get(':idOrSlug')
+  // async findOne(@Param('idOrSlug') idOrSlug: string) {
+  //   try {
+  //     return await this.listingsService.findOne(idOrSlug);
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: 'Failed to get listing',
+  //     }
+  //   }
+  // }
 
-  @Delete(':id')
-  async remove(@Param('id') id: string, @Req() req: Request) {
-    try {
-      return await this.listingsService.remove(id, req?.user?.userId);
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to delete listing',
-      }
-    }
-  }
+  // @Patch(':id')
+  // @UseInterceptors(
+  //   FileInterceptor('image', {
+  //     storage: diskStorage({
+  //       destination:
+  //         appConfig().storageUrl.rootUrl + appConfig().storageUrl.listing,
+  //       filename: (req, file, cb) => {
+  //         const randomName = Array(32)
+  //           .fill(null)
+  //           .map(() => Math.round(Math.random() * 16).toString(16))
+  //           .join('');
+  //         return cb(
+  //           null,
+  //           `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
+  //         );
+  //       },
+  //     }),
+  //     limits: {
+  //       fileSize: 5 * 1024 * 1024, // 5MB in bytes
+  //     },
+  //   }),
+  // )
+  // async update(@Param('id') id: string, @Body() updateListingDto: UpdateListingDto, @UploadedFile() image: Express.Multer.File, @Req() req: Request) {
+  //   try {
+  //     updateListingDto.user_id = req?.user?.userId || "";
+  //     return await this.listingsService.update(id, updateListingDto, image);
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: 'Failed to update listing',
+  //     }
+  //   }
+  // }
+
+  // @Delete(':id')
+  // async remove(@Param('id') id: string, @Req() req: Request) {
+  //   try {
+  //     return await this.listingsService.remove(id, req?.user?.userId);
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: 'Failed to delete listing',
+  //     }
+  //   }
+  // }
 
   // // testing
-  @Post('bulk')
-  async createBulk(@Body() listings: CreateListingDto[]) {
-    return await this.listingsService.createMany(listings);
-  }
+  // @Post('bulk')
+  // async createBulk(@Body() listings: CreateListingDto[]) {
+  //   return await this.listingsService.createMany(listings);
+  // }
 
 }

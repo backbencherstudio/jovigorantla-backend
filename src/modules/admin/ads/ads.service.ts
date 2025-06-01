@@ -194,8 +194,8 @@ async create(createAdDto: CreateAdDto, image: Express.Multer.File) {
 
     if (createAdDto.cities && Array.isArray(createAdDto.cities)) {
       for (const city of createAdDto.cities) {
-        const existingCity = await this.prisma.city.findUnique({
-          where: { slug: city.slug },
+        const existingCity = await this.prisma.city.findFirst({
+          where: { address: city.slug },
         });
 
         let cityId: string;

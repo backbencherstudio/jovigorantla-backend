@@ -50,7 +50,10 @@ export class AdsGroupService {
     const add_groups = await this.prisma.adGroup.findMany({
       include: {
         ads: true
-      }
+      },
+      orderBy: {
+        created_at: 'asc',
+      },
     })
 
     // check ads length and if there are ads then add image url
@@ -132,7 +135,7 @@ export class AdsGroupService {
       if(updateAdsGroupDto?.display_pages) data.display_pages = updateAdsGroupDto.display_pages;
       if(updateAdsGroupDto?.active == true || updateAdsGroupDto.active == false) data.active = updateAdsGroupDto.active;
 
-      console.log(data);
+      // console.log(data);
 
       const updated_ad_group = await this.prisma.adGroup.update({
         where: {
@@ -141,7 +144,7 @@ export class AdsGroupService {
         data,
       })
 
-      console.log("updated_ad_group => ", updated_ad_group)
+      // console.log("updated_ad_group => ", updated_ad_group)
       return {
         success: true,
         message: "ads group updated successfully",
