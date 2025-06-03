@@ -779,109 +779,109 @@ export class ListingsService {
 
 
   
-  // async findNearbyListings(lat: number, lng: number, radius: number) {
-  //   try {
-  //     const radiusInMeters = radius * 1609.34;
-  //     const now = new Date();
+  async findNearbyListings(lat: number, lng: number, radius: number) {
+    try {
+      const radiusInMeters = radius * 1609.34;
+      const now = new Date();
   
-  //     // 1. Find cities within radius with distances
-  //     const nearbyCities = await this.prisma.$queryRaw<
-  //       { id: string; distance: number }[]
-  //     >`
-  //       SELECT 
-  //         id,
-  //         ST_Distance(
-  //           location::geography,
-  //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
-  //         ) / 1609.34 as distance
-  //       FROM "cities"
-  //       WHERE ST_DWithin(
-  //         location::geography,
-  //         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
-  //         ${radiusInMeters}
-  //       )
-  //     `;
+      // 1. Find cities within radius with distances
+      const nearbyCities = await this.prisma.$queryRaw<
+        { id: string; distance: number }[]
+      >`
+        SELECT 
+          id,
+          ST_Distance(
+            location::geography,
+            ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+          ) / 1609.34 as distance
+        FROM "cities"
+        WHERE ST_DWithin(
+          location::geography,
+          ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+          ${radiusInMeters}
+        )
+      `;
   
-  //     if (nearbyCities.length === 0) {
-  //       return {
-  //         success: false,
-  //         message: 'No listings found within the specified radius',
-  //       };
-  //     }
+      if (nearbyCities.length === 0) {
+        return {
+          success: false,
+          message: 'No listings found within the specified radius',
+        };
+      }
   
-  //     // 2. Get approved listings with cities and creation time
-  //     const listings = await this.prisma.listing.findMany({
-  //       where: {
-  //         status: 'APPROVED',
-  //         cities: {
-  //           some: {
-  //             id: {
-  //               in: nearbyCities.map(c => c.id)
-  //             }
-  //           }
-  //         }
-  //       },
-  //       include: {
-  //         cities: {
-  //           where: {
-  //             id: {
-  //               in: nearbyCities.map(c => c.id)
-  //             }
-  //           },
-  //           select: {
-  //             id: true
-  //           }
-  //         },
-  //         user: {
-  //           select: {
-  //             id: true,
-  //             name: true,
-  //             avatar: true,
-  //           }
-  //         }
-  //       }
-  //     });
+      // 2. Get approved listings with cities and creation time
+      const listings = await this.prisma.listing.findMany({
+        where: {
+          status: 'APPROVED',
+          cities: {
+            some: {
+              id: {
+                in: nearbyCities.map(c => c.id)
+              }
+            }
+          }
+        },
+        include: {
+          cities: {
+            where: {
+              id: {
+                in: nearbyCities.map(c => c.id)
+              }
+            },
+            select: {
+              id: true
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+            }
+          }
+        }
+      });
   
-  //     // 3. Calculate scores and sort (in-memory)
-  //     const sortedListings = listings
-  //       .map(listing => {
-  //         // Find minimal distance (in case listing is in multiple nearby cities)
-  //         const listingDistance = Math.min(
-  //           ...nearbyCities
-  //             .filter(c => listing.cities.some(lc => lc.id === c.id))
-  //             .map(c => c.distance)
-  //         );
+      // 3. Calculate scores and sort (in-memory)
+      const sortedListings = listings
+        .map(listing => {
+          // Find minimal distance (in case listing is in multiple nearby cities)
+          const listingDistance = Math.min(
+            ...nearbyCities
+              .filter(c => listing.cities.some(lc => lc.id === c.id))
+              .map(c => c.distance)
+          );
   
-  //         // Calculate freshness (hours since creation)
-  //         const hoursOld = (now.getTime() - listing.created_at.getTime()) / (1000 * 60 * 60);
+          // Calculate freshness (hours since creation)
+          const hoursOld = (now.getTime() - listing.created_at.getTime()) / (1000 * 60 * 60);
   
-  //         // Calculate scores
-  //         const proximityScore = (1 / (listingDistance + 1)) * 100;
-  //         const freshnessScore = Math.max(0, 100 - (hoursOld * 2)); // Ensure not negative
-  //         const finalScore = (proximityScore * 0.5) + (freshnessScore * 0.5);
+          // Calculate scores
+          const proximityScore = (1 / (listingDistance + 1)) * 100;
+          const freshnessScore = Math.max(0, 100 - (hoursOld * 2)); // Ensure not negative
+          const finalScore = (proximityScore * 0.5) + (freshnessScore * 0.5);
   
-  //         return {
-  //           ...listing,
-  //           _score: finalScore // Temporary for sorting
-  //         };
-  //       })
-  //       .sort((a, b) => b._score - a._score)
-  //       .map(({ _score, ...listing }) => listing); // Remove score field from final output
+          return {
+            ...listing,
+            _score: finalScore // Temporary for sorting
+          };
+        })
+        .sort((a, b) => b._score - a._score)
+        .map(({ _score, ...listing }) => listing); // Remove score field from final output
   
-  //     return {
-  //       success: true,
-  //       message: 'Listings fetched successfully',
-  //       data: sortedListings,
-  //     };
+      return {
+        success: true,
+        message: 'Listings fetched successfully',
+        data: sortedListings,
+      };
   
-  //   } catch (error) {
-  //     console.error("Error in findNearbyListings:", error);
-  //     return {
-  //       success: false,
-  //       message: 'Failed to fetch listings',
-  //     };
-  //   }
-  // }
+    } catch (error) {
+      console.error("Error in findNearbyListings:", error);
+      return {
+        success: false,
+        message: 'Failed to fetch listings',
+      };
+    }
+  }
   
   // async findNearbyListings(lat: number, lng: number, radius: number) {
   //   try {
@@ -960,66 +960,67 @@ export class ListingsService {
   //     };
   //   }
   // }
-  async findNearbyListings(lat: number, lng: number, radius: number) {
-    try {
-      const radiusInMeters = radius * 1609.34;
+  // async findNearbyListings(lat: number, lng: number, radius: number) {
+  //   try {
+  //     const radiusInMeters = radius * 1609.34;
   
-      const listings = await this.prisma.$queryRaw`
-        WITH nearby_cities AS (
-          SELECT 
-            id,
-            ST_Distance(
-              location::geography,
-              ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
-            ) / 1609.34 as distance
-          FROM "cities"
-          WHERE ST_DWithin(
-            location::geography,
-            ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
-            ${radiusInMeters}
-          )
-        )
-        SELECT 
-          l.id,
-          l.title,
-          l.description,
-          l.image,
-          l.slug,
-          l.status,
-          l.post_to_usa,
-          l.created_at,
-          json_build_object(
-            'id', u.id,
-            'name', u.name,
-            'avatar', u.avatar
-          ) as user
-        FROM "listings" l
-        JOIN "_ListingCities" lc ON l.id = lc."A"
-        JOIN nearby_cities c ON lc."B" = c.id
-        JOIN "users" u ON l.user_id = u.id
-        WHERE l.status = 'APPROVED'
-        GROUP BY l.id, u.id
-        ORDER BY 
-          /* Final Score = (Proximity * 0.5) + (Freshness * 0.5) */
-          (
-            (1 / (MIN(c.distance) + 1)) * 100 * 0.5 + 
-            (100 - GREATEST(0, EXTRACT(EPOCH FROM (NOW() - l.created_at))/3600 * 2) * 0.5
-          ) DESC
-      `;
-  
-      return {
-        success: true,
-        message: (listings as any[]).length ? 'Listings fetched successfully' : 'No listings found',
-        data: listings,
-      };
-    } catch (error) {
-      console.error("Error in findNearbyListings:", error);
-      return {
-        success: false,
-        message: 'Failed to fetch listings',
-      };
-    }
-  }
+  //     const listings = await this.prisma.$queryRaw`
+  //       WITH nearby_cities AS (
+  //         SELECT 
+  //           id,
+  //           ST_Distance(
+  //             location::geography,
+  //             ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+  //           ) / 1609.34 as distance
+  //         FROM "cities"
+  //         WHERE ST_DWithin(
+  //           location::geography,
+  //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //           ${radiusInMeters}
+  //         )
+  //       )
+  //       SELECT 
+  //         l.id,
+  //         l.title,
+  //         l.description,
+  //         l.image,
+  //         l.slug,
+  //         l.status,
+  //         l.post_to_usa,
+  //         l.created_at,
+  //         json_build_object(
+  //           'id', u.id,
+  //           'name', u.name,
+  //           'avatar', u.avatar
+  //         ) as user
+  //       FROM "listings" l
+  //       JOIN "_ListingCities" lc ON l.id = lc."A"
+  //       JOIN nearby_cities c ON lc."B" = c.id
+  //       JOIN "users" u ON l.user_id = u.id
+  //       WHERE l.status = 'APPROVED'
+  //       GROUP BY l.id, u.id
+  //       ORDER BY 
+  //         (
+  //           (1 / (MIN(c.distance) + 1)) * 100 * 0.5 + 
+  //           (100 - GREATEST(0, EXTRACT(EPOCH FROM (NOW() - l.created_at))/3600 * 2) * 0.5
+  //         ) DESC
+  //     `;
+  //         /* Final Score = (Proximity * 0.5) + (Freshness * 0.5) */
+
+
+  //     return {
+  //       success: true,
+  //       message: (listings as any[]).length ? 'Listings fetched successfully' : 'No listings found',
+  //       data: listings,
+  //     };
+  //   } catch (error) {
+  //     console.error("Error in findNearbyListings:", error);
+  //     return {
+  //       success: false,
+  //       message: 'Failed to fetch listings',
+  //     };
+  //   }
+  // }
 
   // async debugCityListings() {
   //   // Check how many cities exist

@@ -132,10 +132,10 @@ export class MessageGateway
         status: 'offline',
       });
 
-      console.log(`User ${userId} disconnected`);
+      // console.log(`User ${userId} disconnected`);
     }
 
-    console.log(`sojeb User ${userId} disconnected`);
+    // console.log(`sojeb User ${userId} disconnected`);
 
   }
 
