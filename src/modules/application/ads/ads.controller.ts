@@ -43,6 +43,37 @@ export class AdsController {
     }
   }
 
+  // test ads
+  @Get('test')
+  async getTestAds() {
+    try {
+      return {
+        success: true,
+        data: [
+          {
+            id: '1',
+            title: 'Test Ad 1',
+            description: 'This is a test ad description.',
+            imageUrl: 'https://via.placeholder.com/150',
+            link: 'https://example.com/test-ad-1',
+          },
+          {
+            id: '2',
+            title: 'Test Ad 2',
+            description: 'This is another test ad description.',
+            imageUrl: 'https://via.placeholder.com/150',
+            link: 'https://example.com/test-ad-2',
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to fetch test ads',
+      };
+    }
+  }
+
 
   
 

@@ -10,7 +10,26 @@ import { NearbyListingsQueryDto } from './dto/near-by-listing.dto';
 import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
 import appConfig from 'src/config/app.config';
 import { FindAllQueryDto } from './dto/find-all-query.dto';
+import { number } from 'zod';
+import { AdsService } from 'src/modules/admin/ads/ads.service';
+import { Prisma } from '@prisma/client';
 
+
+
+interface AdGroupWithAds {
+  group_id: string;
+  group_name: string;
+  display_pages: string[];
+  frequency: number;
+  ads: {
+    id: string;
+    name: string;
+    target_url: string;
+    image_url: string;
+    views: number;
+    clicks: number;
+  }[];
+}
 
 interface CityResult {
   id: string;
@@ -196,13 +215,13 @@ export class ListingsService {
   async create(createListingDto: CreateListingDto, image: Express.Multer.File) {
     try {
       // Validate image requirement
-      if ((createListingDto.category === DisplayPageType.MARKETPLACE ||
-        createListingDto.category === DisplayPageType.ACCOMMODATIONS) && !image) {
-        return {
-          success: false,
-          message: 'Image is required',
-        };
-      }
+      // if ((createListingDto.category === DisplayPageType.MARKETPLACE ||
+      //   createListingDto.category === DisplayPageType.ACCOMMODATIONS) && !image) {
+      //   return {
+      //     success: false,
+      //     message: 'Image is required',
+      //   };
+      // }
 
       const { cities, ...otherData } = createListingDto;
 
@@ -300,6 +319,30 @@ export class ListingsService {
         message: 'Failed to create listing',
       };
     }
+  }
+
+  async bulkCreate(createListingsDto: CreateListingDto[]) {
+  try {
+    const results = [];
+
+  for (const dto of createListingsDto) {
+    // Skip image for bulk inserts
+    const result = await this.create(dto, null);
+    results.push(result);
+  }
+
+  return {
+    success: true,
+    message: 'Bulk listings creation attempted',
+    data: results,
+  };
+  }catch (error) {
+    console.error('Error creating listings (service):', error);
+    return {
+      success: false,
+      message: 'Failed to create listings',
+    };
+}
   }
 
   // async create(createListingDto: CreateListingDto, image: Express.Multer.File) {
@@ -778,110 +821,1402 @@ export class ListingsService {
   // }
 
 
+  // the orginal one
+  // async findNearbyListings(lat: number, lng: number, radius: number) {
+  //   try {
+  //     const radiusInMeters = radius * 1609.34;
+  //     const now = new Date();
   
-  async findNearbyListings(lat: number, lng: number, radius: number) {
+  //     // 1. Find cities within radius with distances
+  //     const nearbyCities = await this.prisma.$queryRaw<
+  //       { id: string; distance: number }[]
+  //     >`
+  //       SELECT 
+  //         id,
+  //         ST_Distance(
+  //           location::geography,
+  //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+  //         ) / 1609.34 as distance
+  //       FROM "cities"
+  //       WHERE ST_DWithin(
+  //         location::geography,
+  //         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //         ${radiusInMeters}
+  //       )
+  //     `;
+  
+  //     if (nearbyCities.length === 0) {
+  //       return {
+  //         success: false,
+  //         message: 'No listings found within the specified radius',
+  //       };
+  //     }
+  
+  //     // 2. Get approved listings with cities and creation time
+  //     const listings = await this.prisma.listing.findMany({
+  //       where: {
+  //         status: 'APPROVED',
+  //         cities: {
+  //           some: {
+  //             id: {
+  //               in: nearbyCities.map(c => c.id)
+  //             }
+  //           }
+  //         }
+  //       },
+  //       include: {
+  //         cities: {
+  //           where: {
+  //             id: {
+  //               in: nearbyCities.map(c => c.id)
+  //             }
+  //           },
+  //           select: {
+  //             id: true
+  //           }
+  //         },
+  //         user: {
+  //           select: {
+  //             id: true,
+  //             name: true,
+  //             avatar: true,
+  //           }
+  //         }
+  //       }
+  //     });
+  
+  //     // 3. Calculate scores and sort (in-memory)
+  //     const sortedListings = listings
+  //       .map(listing => {
+  //         // Find minimal distance (in case listing is in multiple nearby cities)
+  //         const listingDistance = Math.min(
+  //           ...nearbyCities
+  //             .filter(c => listing.cities.some(lc => lc.id === c.id))
+  //             .map(c => c.distance)
+  //         );
+  
+  //         // Calculate freshness (hours since creation)
+  //         const hoursOld = (now.getTime() - listing.created_at.getTime()) / (1000 * 60 * 60);
+  
+  //         // Calculate scores
+  //         const proximityScore = (1 / (listingDistance + 1)) * 100;
+  //         const freshnessScore = Math.max(0, 100 - (hoursOld * 2)); // Ensure not negative
+  //         const finalScore = (proximityScore * 0.5) + (freshnessScore * 0.5);
+  
+  //         return {
+  //           ...listing,
+  //           _score: finalScore // Temporary for sorting
+  //         };
+  //       })
+  //       .sort((a, b) => b._score - a._score)
+  //       .map(({ _score, ...listing }) => listing); // Remove score field from final output
+  
+  //     return {
+  //       success: true,
+  //       message: 'Listings fetched successfully',
+  //       data: {
+  //         listings: sortedListings,
+  //         numberOfListings: sortedListings.length,
+  //         radius: radius,
+  //       },
+
+  //     };
+  
+  //   } catch (error) {
+  //     console.error("Error in findNearbyListings:", error);
+  //     return {
+  //       success: false,
+  //       message: 'Failed to fetch listings',
+  //     };
+  //   }
+  // }
+
+//   async findNearbyListings(
+//   lat: number,
+//   lng: number,
+//   radius: number,
+//   limit = 10,
+//   numberOfShownListings = 0,
+//   listing_cutoff_time?: string
+// ) {
+//   try {
+//     const radiusInMeters = radius * 1609.34;
+//     const now = new Date();
+
+//     const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+
+//     // 1. Find nearby cities
+//     const nearbyCities = await this.prisma.$queryRaw<{ id: string; distance: number }[]>`
+//       SELECT 
+//         id,
+//         ST_Distance(
+//           location::geography,
+//           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+//         ) / 1609.34 as distance
+//       FROM "cities"
+//       WHERE ST_DWithin(
+//         location::geography,
+//         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+//         ${radiusInMeters}
+//       )
+//     `;
+
+//     // console.log("Nearby Cities:", nearbyCities,  nearbyCities.length);
+
+//     if (nearbyCities.length === 0) {
+//       return {
+//         success: false,
+//         message: 'No listings found within the specified radius',
+//       };
+//     }
+
+//     // 2. Get all listings (filtered by cutoff)
+//     const listings = await this.prisma.listing.findMany({
+//       where: {
+//         status: 'APPROVED',
+//         created_at: { lte: cutoff },
+//         cities: {
+//           some: {
+//             id: { in: nearbyCities.map(c => c.id) },
+//           },
+//         },
+//       },
+//       include: {
+//         cities: {
+//           where: { id: { in: nearbyCities.map(c => c.id) } },
+//           select: { id: true, address: true },
+//         },
+//         user: {
+//           select: {
+//             id: true,
+//             name: true,
+//             avatar: true,
+//           },
+//         },
+//       },
+//     });
+
+//     // 3. Score listings
+//     const scored = listings.map(listing => {
+//       const listingDistance = Math.min(
+//         ...nearbyCities
+//           .filter(c => listing.cities.some(lc => lc.id === c.id))
+//           .map(c => c.distance)
+//       );
+
+//       const hoursOld = (now.getTime() - listing.created_at.getTime()) / (1000 * 60 * 60);
+//       const proximityScore = (1 / (listingDistance + 1)) * 100;
+//       const freshnessScore = Math.max(0, 100 - hoursOld * 2);
+//       const finalScore = (proximityScore * 0.5) + (freshnessScore * 0.5);
+
+//       return { ...listing, _score: finalScore };
+//     });
+
+//     // 4. Sort + paginate using numberOfShownListings
+//     const sorted = scored.sort((a, b) => b._score - a._score);
+//     const paginated = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+
+//     return {
+//       success: true,
+//       message: 'Listings fetched successfully',
+//       data: {
+//         listings: paginated.map(({ _score, ...rest }) => rest),
+//         numberOfShownListings: numberOfShownListings + paginated.length,
+//         hasMore: numberOfShownListings + paginated.length < sorted.length,
+//         listing_cutoff_time: listing_cutoff_time || now.toISOString(),
+//       },
+//     };
+//   } catch (error) {
+//     console.error("Error in findNearbyListings:", error);
+//     return {
+//       success: false,
+//       message: 'Failed to fetch listings',
+//     };
+//   }
+//   }
+
+  // letest workin code.
+  // async findNearbyListings(
+  //   lat: number,
+  //   lng: number,
+  //   radius: number,
+  //   limit = 10,
+  //   numberOfShownListings = 0,
+  //   listing_cutoff_time?: string
+  // ) {
+  //   try {
+  //     const radiusInMeters = radius * 1609.34;
+  //     const now = new Date();
+  //     const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+  //     const cutoffISO = cutoff.toISOString(); // '2025-06-10T10:09:23.461Z'
+  //     const proximityWeight = 0.5; // Weight for proximity score
+  //     const freshnessWeight = 0.5; // Weight for freshness score
+
+
+  //     // 1. Fetch listings with city distances
+  //     const rawListings = await this.prisma.$queryRaw<Array<{
+  //       id: string;
+  //       created_at: Date;
+  //       title: string;
+  //       description: string;
+  //       user_id: string;
+  //       user_name: string;
+  //       user_avatar: string | null;
+  //       distance: number;
+  //     }>>`
+  //       SELECT 
+  //         l.id,
+  //         l.created_at,
+  //         l.title,
+  //         l.description,
+  //         u.id AS user_id,
+  //         u.name AS user_name,
+  //         u.avatar AS user_avatar,
+  //         ST_Distance(
+  //           c.location::geography,
+  //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+  //         ) / 1609.34 AS distance
+  //       FROM listings l
+  //       JOIN "_ListingCities" lc ON lc."B" = l.id
+  //       JOIN cities c ON c.id = lc."A"
+  //       JOIN users u ON u.id = l.user_id
+  //       WHERE ST_DWithin(
+  //         c.location::geography,
+  //         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //         ${radiusInMeters}
+  //       )
+  //       AND l.status = 'APPROVED'
+  //       AND l.created_at <= ${cutoffISO}::timestamp
+  //     `;
+
+  //     if (!rawListings.length) {
+  //       return {
+  //         success: false,
+  //         message: 'No listings found within the specified radius',
+  //         data: {
+  //           listings: [],
+  //           numberOfShownListings: 0,
+  //           hasMore: false,
+  //           listing_cutoff_time: cutoff.toISOString(),
+  //         }
+  //       };
+  //     }
+
+  //     // 2. Group listings by ID, keeping only the one with the shortest distance
+  //     const listingMap = new Map<string, typeof rawListings[0]>();
+
+  //     for (const row of rawListings) {
+  //       const existing = listingMap.get(row.id);
+  //       if (!existing || row.distance < existing.distance) {
+  //         listingMap.set(row.id, row);
+  //       }
+  //     }
+
+  //     const uniqueListings = Array.from(listingMap.values());
+
+  //     // 3. Score listings (proximity + freshness)
+  //     const scoredListings = uniqueListings.map(listing => {
+  //       const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
+  //       const proximityScore = (1 / (listing.distance + 1)) * 100;
+  //       const freshnessScore = Math.max(0, 100 - hoursOld * 2);
+  //       const finalScore = (proximityScore * proximityScore) + (freshnessScore * freshnessWeight);
+        
+  //       return {
+  //         ...listing,
+  //         _score: finalScore,
+  //       };
+  //     });
+
+  //     // 4. Sort by score and paginate
+  //     const sorted = scoredListings.sort((a, b) => b._score - a._score);
+  //     const paginated = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+
+
+
+  //     // 5. Return structured result
+  //     return {
+  //       success: true,
+  //       message: 'Listings fetched successfully',
+  //       data: {
+  //         listings: paginated.map(({ _score, user_id, user_name, user_avatar, ...rest }) => ({
+  //           ...rest,
+  //           user: {
+  //             id: user_id,
+  //             name: user_name,
+  //             avatar: user_avatar,
+  //           }
+  //         })),
+  //         numberOfShownListings: numberOfShownListings + paginated.length,
+  //         hasMore: numberOfShownListings + paginated.length < sorted.length,
+  //         listing_cutoff_time: cutoff.toISOString(),
+  //         totalCount: uniqueListings.length, // Total count of unique listings
+  //       }
+  //     };
+  //   } catch (error) {
+  //     console.error('Error in findNearbyListings:', error);
+  //     return {
+  //       success: false,
+  //       message: 'Failed to fetch listings',
+  //     };
+  //   }
+  // }
+
+
+  // async findNearbyListings(
+  //   lat: number,
+  //   lng: number,
+  //   radius: number,
+  //   limit = 10,
+  //   numberOfShownListings = 0,
+  //   listing_cutoff_time?: string,
+  //   category?: string,       // Optional parameter for category filter
+  //   sub_category?: string,   // Optional parameter for sub_category filter
+  //   search?: string,         // Optional parameter for search filter
+  //   is_usa?: boolean         // New optional parameter for filtering USA listings
+  // ) {
+  //   try {
+  //     const radiusInMeters = radius * 1609.34;
+  //     const now = new Date();
+  //     const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+  //     const cutoffISO = cutoff.toISOString();
+  //     const proximityWeight = 0.5;
+  //     const freshnessWeight = 0.5;
+
+  //     // Build the base SQL query using Prisma sql tag
+  //     let query = this.prisma.$queryRaw`
+  //       SELECT 
+  //         l.id,
+  //         l.created_at,
+  //         l.title,
+  //         l.description,
+  //         u.id AS user_id,
+  //         u.name AS user_name,
+  //         u.avatar AS user_avatar,
+  //         ST_Distance(
+  //           c.location::geography,
+  //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+  //         ) / 1609.34 AS distance
+  //       FROM listings l
+  //       JOIN "_ListingCities" lc ON lc."B" = l.id
+  //       JOIN cities c ON c.id = lc."A"
+  //       JOIN users u ON u.id = l.user_id
+  //       WHERE ST_DWithin(
+  //         c.location::geography,
+  //         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //         ${radiusInMeters}
+  //       )
+  //       AND l.status = 'APPROVED'
+  //       AND l.created_at <= ${cutoffISO}::timestamp
+  //     `;
+
+  //     // Add category filter if provided
+  //     if (category) {
+  //       query = this.prisma.$queryRaw`${query} AND l.category = ${category}`;
+  //     }
+
+  //     // Add sub_category filter if provided
+  //     if (sub_category) {
+  //       query = this.prisma.$queryRaw`${query} AND l.sub_category = ${sub_category}`;
+  //     }
+
+  //     // Add search filter if provided
+  //     if (search) {
+  //       query = this.prisma.$queryRaw`${query} AND (l.title ILIKE ${`%${search}%`} OR l.description ILIKE ${`%${search}%`})`;
+  //     }
+
+  //     // Add is_usa filter if provided
+  //     if (is_usa !== undefined) {
+  //       query = this.prisma.$queryRaw`${query} AND l.is_usa = ${is_usa}`;
+  //     }
+
+  //     // Execute the query
+  //     const rawListings = await query as Array<{
+  //       id: string;
+  //       created_at: Date;
+  //       title: string;
+  //       description: string;
+  //       user_id: string;
+  //       user_name: string;
+  //       user_avatar: string | null;
+  //       distance: number;
+  //     }>;
+
+  //     if (!rawListings.length) {
+  //       return {
+  //         success: false,
+  //         message: 'No listings found within the specified radius',
+  //         data: {
+  //           listings: [],
+  //           numberOfShownListings: 0,
+  //           hasMore: false,
+  //           listing_cutoff_time: cutoff.toISOString(),
+  //         }
+  //       };
+  //     }
+
+  //     // Group listings by ID, keeping only the one with the shortest distance
+  //     const listingMap = new Map<string, typeof rawListings[0]>();
+
+  //     for (const row of (rawListings as any)) {
+  //       const existing = listingMap.get(row.id);
+  //       if (!existing || row.distance < existing.distance) {
+  //         listingMap.set(row.id, row);
+  //       }
+  //     }
+
+  //     const uniqueListings = Array.from(listingMap.values());
+
+  //     // Score listings (proximity + freshness)
+  //     const scoredListings = uniqueListings.map(listing => {
+  //       const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
+  //       const proximityScore = (1 / (listing.distance + 1)) * 100;
+  //       const freshnessScore = Math.max(0, 100 - hoursOld * 2);
+  //       const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
+
+  //       return {
+  //         ...listing,
+  //         _score: finalScore,
+  //       };
+  //     });
+
+  //     // Sort by score and paginate
+  //     const sorted = scoredListings.sort((a, b) => b._score - a._score);
+  //     const paginated = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+
+  //     // Return structured result
+  //     return {
+  //       success: true,
+  //       message: 'Listings fetched successfully',
+  //       data: {
+  //         listings: paginated.map(({ _score, user_id, user_name, user_avatar, ...rest }) => ({
+  //           ...rest,
+  //           user: {
+  //             id: user_id,
+  //             name: user_name,
+  //             avatar: user_avatar,
+  //           }
+  //         })),
+  //         numberOfShownListings: numberOfShownListings + paginated.length,
+  //         hasMore: numberOfShownListings + paginated.length < sorted.length,
+  //         listing_cutoff_time: cutoff.toISOString(),
+  //         totalCount: uniqueListings.length,
+  //       }
+  //     };
+  //   } catch (error) {
+  //     console.error('Error in findNearbyListings:', error);
+  //     return {
+  //       success: false,
+  //       message: 'Failed to fetch listings',
+  //     };
+  //   }
+  // }
+
+//   async findNearbyListings(
+//     lat: number,
+//     lng: number,
+//     radius: number,
+//     limit = 10,
+//     numberOfShownListings = 0,
+//     listing_cutoff_time?: string,
+//     category?: string,       // Optional parameter for category filter
+//     sub_category?: string,   // Optional parameter for sub_category filter
+//     search?: string,         // Optional parameter for search filter
+//     is_usa?: boolean         // New optional parameter for filtering USA listings
+// ) {
+//     try {
+//         const radiusInMeters = radius * 1609.34;
+//         const now = new Date();
+//         const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+//         const cutoffISO = cutoff.toISOString();
+//         const proximityWeight = 0.5;
+//         const freshnessWeight = 0.5;
+
+//         // Start building the SQL query using Prisma sql tag
+//         let query = this.prisma.$queryRaw`
+//             SELECT 
+//                 l.id,
+//                 l.created_at,
+//                 l.title,
+//                 l.description,
+//                 l.image,
+//                 l.category,
+//                 l.sub_category,
+//                 l.slug,
+//                 l.status,
+//                 l.usa_listing_status,
+//                 l.post_to_usa,
+//                 u.id AS user_id,
+//                 u.name AS user_name,
+//                 u.avatar AS user_avatar,
+//                 ST_Distance(
+//                     c.location::geography,
+//                     ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+//                 ) / 1609.34 AS distance
+//             FROM listings l
+//             JOIN "_ListingCities" lc ON lc."B" = l.id
+//             JOIN cities c ON c.id = lc."A"
+//             JOIN users u ON u.id = l.user_id
+//             WHERE ST_DWithin(
+//                 c.location::geography,
+//                 ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+//                 ${radiusInMeters}
+//             )
+//             AND l.status = 'APPROVED'
+//             AND l.created_at <= ${cutoffISO}::timestamp
+//         `;
+        
+
+//         // Add category filter if provided
+//         if (category) {
+//             query = this.prisma.$queryRaw`
+//                 ${query} AND l.category = ${category}
+//             `;
+//         }
+
+//         // Add sub_category filter if provided
+//         if (sub_category) {
+//             query = this.prisma.$queryRaw`
+//                 ${query} AND l.sub_category = ${sub_category}
+//             `;
+//         }
+
+//         // Add search filter if provided
+//         if (search) {
+//             query = this.prisma.$queryRaw`
+//                 ${query} AND (l.title ILIKE ${`%${search}%`} OR l.description ILIKE ${`%${search}%`})
+//             `;
+//         }
+
+//         // Add is_usa filter if provided
+//         if (is_usa !== undefined) {
+//             query = this.prisma.$queryRaw`
+//                 ${query} AND l.post_to_usa = ${is_usa}
+//             `;
+//         }
+
+//         // Execute the modified query
+//         const rawListings: any = await query;
+
+//         if (!rawListings.length) {
+//             return {
+//                 success: false,
+//                 message: 'No listings found within the specified radius',
+//                 data: {
+//                     listings: [],
+//                     numberOfShownListings: 0,
+//                     hasMore: false,
+//                     listing_cutoff_time: cutoff.toISOString(),
+//                 }
+//             };
+//         }
+
+//         // Group listings by ID, keeping only the one with the shortest distance
+//         const listingMap = new Map<string, typeof rawListings[0]>();
+
+//         for (const row of (rawListings as any)) {
+//             const existing = listingMap.get(row.id);
+//             if (!existing || row.distance < existing.distance) {
+//                 listingMap.set(row.id, row);
+//             }
+//         }
+
+//         const uniqueListings = Array.from(listingMap.values());
+
+//         // Score listings (proximity + freshness)
+//         const scoredListings = uniqueListings.map(listing => {
+//             const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
+//             const proximityScore = (1 / (listing.distance + 1)) * 100;
+//             const freshnessScore = Math.max(0, 100 - hoursOld * 2);
+//             const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
+
+//             return {
+//                 ...listing,
+//                 _score: finalScore,
+//             };
+//         });
+
+//         // Sort by score and paginate
+//         const sorted = scoredListings.sort((a, b) => b._score - a._score);
+//         const paginated = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+
+//         // Return structured result
+//         return {
+//             success: true,
+//             message: 'Listings fetched successfully',
+//             data: {
+//                 listings: paginated.map(({ _score, user_id, user_name, user_avatar, ...rest }) => ({
+//                     ...rest,
+//                     user: {
+//                         id: user_id,
+//                         name: user_name,
+//                         avatar: user_avatar,
+//                     }
+//                 })),
+//                 numberOfShownListings: numberOfShownListings + paginated.length,
+//                 hasMore: numberOfShownListings + paginated.length < sorted.length,
+//                 listing_cutoff_time: cutoff.toISOString(),
+//                 totalCount: uniqueListings.length,
+//             }
+//         };
+//     } catch (error) {
+//         console.error('Error in findNearbyListings:', error);
+//         return {
+//             success: false,
+//             message: 'Failed to fetch listings',
+//         };
+//     }
+//   }
+
+
+  async findNearbyListings(
+    lat: number,
+    lng: number,
+    radius: number,
+    limit = 10,
+    numberOfShownListings = 0,
+    listing_cutoff_time?: string,
+    category?: string,
+    sub_category?: string,
+    search?: string,
+    is_usa?: boolean
+) {
     try {
-      const radiusInMeters = radius * 1609.34;
-      const now = new Date();
-  
-      // 1. Find cities within radius with distances
-      const nearbyCities = await this.prisma.$queryRaw<
-        { id: string; distance: number }[]
-      >`
-        SELECT 
-          id,
-          ST_Distance(
-            location::geography,
-            ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
-          ) / 1609.34 as distance
-        FROM "cities"
-        WHERE ST_DWithin(
-          location::geography,
-          ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
-          ${radiusInMeters}
-        )
-      `;
-  
-      if (nearbyCities.length === 0) {
+        const radiusInMeters = radius * 1609.34;
+        const now = new Date();
+        const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+        const cutoffISO = cutoff.toISOString();
+        const proximityWeight = 0.5;
+        const freshnessWeight = 0.5;
+
+        // Start building the WHERE conditions
+        let whereConditions = `
+            WHERE ST_DWithin(
+                c.location::geography,
+                ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+                ${radiusInMeters}
+            )
+            AND l.status = 'APPROVED'
+            AND l.created_at <= '${cutoffISO}'::timestamp
+        `;
+
+        // Add filters conditionally
+        if (category) {
+            whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
+        }
+        if (sub_category) {
+            whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
+        }
+        if (search) {
+            whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
+        }
+        if (is_usa !== undefined) {
+            whereConditions += ` AND l.post_to_usa = ${is_usa}`;
+        }
+
+        // Build the complete query
+        const query = `
+            SELECT 
+                l.id,
+                l.created_at,
+                l.slug,
+                l.title,
+                l.description,
+                l.image,
+                l.category,
+                l.sub_category,
+                l.status,
+                l.usa_listing_status,
+                l.post_to_usa,
+                u.id AS user_id,
+                u.name AS user_name,
+                u.avatar AS user_avatar,
+                ST_Distance(
+                    c.location::geography,
+                    ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+                ) / 1609.34 AS distance
+            FROM listings l
+            JOIN "_ListingCities" lc ON lc."B" = l.id
+            JOIN cities c ON c.id = lc."A"
+            JOIN users u ON u.id = l.user_id
+            ${whereConditions}
+        `;
+
+        // Execute the query
+        const rawListings: any = await this.prisma.$queryRawUnsafe(query);
+
+        // Rest of your processing logic remains the same...
+        if (!rawListings.length) {
+            return {
+                success: false,
+                message: 'No listings found within the specified radius',
+                data: {
+                    listings: [],
+                    numberOfShownListings: 0,
+                    hasMore: false,
+                    listing_cutoff_time: cutoff.toISOString(),
+                }
+            };
+        }
+
+        // Group listings by ID, keeping only the one with the shortest distance
+        const listingMap = new Map<string, any>();
+
+        for (const row of rawListings) {
+            const existing = listingMap.get(row.id);
+            if (!existing || row.distance < existing.distance) {
+                listingMap.set(row.id, row);
+            }
+        }
+
+        const uniqueListings = Array.from(listingMap.values());
+
+        // Score listings (proximity + freshness)
+        const scoredListings = uniqueListings.map(listing => {
+            const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
+            const proximityScore = (1 / (listing.distance + 1)) * 100;
+            const freshnessScore = Math.max(0, 100 - hoursOld * 2);
+            const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
+
+            return {
+                ...listing,
+                _score: finalScore,
+            };
+        });
+
+        // Sort by score and paginate
+        const sorted = scoredListings.sort((a, b) => b._score - a._score);
+        // const paginated = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+
+        
+        const groupsWithAds = await this.getActiveAdGroupsWithGeoMatchedAds(category || 'HOME', lat, lng);
+        const paginatedWithAds = this.injectAdsWithPagination(sorted, groupsWithAds, numberOfShownListings, limit);
+        // console.log("Ads fetched:", groupsWithAds);
+        
+
         return {
-          success: false,
-          message: 'No listings found within the specified radius',
+  success: true,
+  message: 'Listings fetched successfully',
+  data: {
+    listings: paginatedWithAds.map((item) => {
+      if (item.__isAd) {
+        return {
+          type: 'ad',
+          id: item.id,
+          name: item.name,
+          target_url: item.target_url,
+          image_url: SojebStorage.url(appConfig().storageUrl.ads + item.image_url),
+          views: item.views || 0,
+          clicks: item.clicks || 0,
+          group_id: item.group_id,
+          group_name: item.group_name,
+        };
+      } else {
+        return {
+          type: 'listing',
+          id: item.id,
+          title: item.title,
+          slug: item.slug,
+          image: item.image,
+          category: item.category,
+          sub_category: item.sub_category,
+          description: item.description,
+          status: item.status,
+          post_to_usa: item.post_to_usa,
+          user: {
+            id: item.user_id,
+            name: item.user_name,
+            avatar: item.user_avatar,
+          }
         };
       }
-  
-      // 2. Get approved listings with cities and creation time
-      const listings = await this.prisma.listing.findMany({
-        where: {
-          status: 'APPROVED',
-          cities: {
-            some: {
-              id: {
-                in: nearbyCities.map(c => c.id)
-              }
-            }
-          }
-        },
-        include: {
-          cities: {
-            where: {
-              id: {
-                in: nearbyCities.map(c => c.id)
-              }
-            },
-            select: {
-              id: true
-            }
-          },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              avatar: true,
-            }
-          }
-        }
-      });
-  
-      // 3. Calculate scores and sort (in-memory)
-      const sortedListings = listings
-        .map(listing => {
-          // Find minimal distance (in case listing is in multiple nearby cities)
-          const listingDistance = Math.min(
-            ...nearbyCities
-              .filter(c => listing.cities.some(lc => lc.id === c.id))
-              .map(c => c.distance)
-          );
-  
-          // Calculate freshness (hours since creation)
-          const hoursOld = (now.getTime() - listing.created_at.getTime()) / (1000 * 60 * 60);
-  
-          // Calculate scores
-          const proximityScore = (1 / (listingDistance + 1)) * 100;
-          const freshnessScore = Math.max(0, 100 - (hoursOld * 2)); // Ensure not negative
-          const finalScore = (proximityScore * 0.5) + (freshnessScore * 0.5);
-  
-          return {
-            ...listing,
-            _score: finalScore // Temporary for sorting
-          };
-        })
-        .sort((a, b) => b._score - a._score)
-        .map(({ _score, ...listing }) => listing); // Remove score field from final output
-  
-      return {
-        success: true,
-        message: 'Listings fetched successfully',
-        data: sortedListings,
-      };
-  
+    }),
+    numberOfShownListings: numberOfShownListings + paginatedWithAds.length,
+    hasMore: numberOfShownListings + paginatedWithAds.length < (sorted.length + groupsWithAds.length * 5), // approx
+    listing_cutoff_time: cutoff.toISOString(),
+    totalCount: sorted.length,
+  }
+};
+
+
+
+        // groupsWithAds.forEach(group => {
+        //     group.ads.forEach(ad => {
+        //         console.log("Ad details:", ad)
+        //     });
+        // }
+        // );
+            // Add ads to the paginated listings
+
+        // Return structured result
+        // return {
+        //     success: true,
+        //     message: 'Listings fetched successfully',
+        //     data: {
+        //         listings: paginated.map(({ _score, user_id, user_name, user_avatar, ...rest }) => ({
+        //             ...rest,
+        //             user: {
+        //                 id: user_id,
+        //                 name: user_name,
+        //                 avatar: user_avatar,
+        //             }
+        //         })),
+        //         numberOfShownListings: numberOfShownListings + paginated.length,
+        //         hasMore: numberOfShownListings + paginated.length < sorted.length,
+        //         listing_cutoff_time: cutoff.toISOString(),
+        //         totalCount: uniqueListings.length,
+        //     }
+        // };
     } catch (error) {
-      console.error("Error in findNearbyListings:", error);
-      return {
-        success: false,
-        message: 'Failed to fetch listings',
-      };
+        console.error('Error in findNearbyListings:', error);
+        return {
+            success: false,
+            message: 'Failed to fetch listings',
+        };
     }
   }
+
+
+    // Function to fetch groups and ads within radius
+    // async getAdGroupsWithAdsByLocation(
+    //   lat: number,
+    //   lng: number,
+    //   category: string = 'HOME'
+    // ) {
+    //   try {
+    //     const adGroups = await this.prisma.adGroup.findMany({
+    //       where: {
+    //         display_pages: {
+    //           has: category as any,
+    //         },
+    //         OR: [
+    //           {
+    //             AND: [
+    //               { start_date: { lte: new Date() } },
+    //               { end_date: { gte: new Date() } },
+    //             ],
+    //           },
+    //           {
+    //             start_date: { lte: new Date() },
+    //             end_date: null,
+    //           },
+    //           {
+    //             start_date: null,
+    //             end_date: { gte: new Date() },
+    //           },
+    //           {
+    //             start_date: null,
+    //             end_date: null,
+    //           },
+    //         ],
+    //       },
+    //       include: {
+    //         ads: {
+    //           where: {
+    //             active: true,
+    //           },
+    //           include: {
+    //             adCities: {
+    //               include: {
+    //                 city: {
+    //                   select: {
+    //                     latitude: true,
+    //                     longitude: true,
+    //                   },
+    //                 },
+    //               },
+    //             },
+    //           },
+    //         },
+    //       },
+    //     });
+
+    //     const result = adGroups
+    //       .map(group => {
+    //         const filteredAds = group.ads.filter(ad =>
+    //           ad.adCities.some(ac =>
+    //             ac.city &&
+    //             ac.city.latitude === lat &&
+    //             ac.city.longitude === lng
+    //           )
+    //         );
+
+    //         if (filteredAds.length === 0) return null;
+
+    //         return {
+    //           group_id: group.id,
+    //           group_name: group.name,
+    //           display_pages: group.display_pages,
+    //           ads: filteredAds.map(ad => ({
+    //             id: ad.id,
+    //             name: ad.name,
+    //             target_url: ad.target_url,
+    //             image_url: SojebStorage.url(appConfig().storageUrl.ads + ad.image),
+    //             views: ad.views,
+    //             clicks: ad.clicks,
+    //           })),
+    //         };
+    //       })
+    //       .filter(group => group !== null);
+
+    //     return result;
+    //   } catch (error) {
+    //     console.error('Error in getAdGroupsWithAdsByLocation:', error);
+    //     throw new Error('Failed to fetch grouped ads');
+    //   }
+    // }
+
+
+
+
+
+
+  
+
+
+  // v1
+  //   async findNearbyListings(
+  //   lat: number,
+  //   lng: number,
+  //   radius: number,
+  //   limit = 10,
+  //   numberOfShownListings = 0,
+  //   listing_cutoff_time?: string
+  // ) {
+  //   try {
+  //     const radiusInMeters = radius * 1609.34;
+  //     const now = new Date();
+  //     const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+  //     const cutoffISO = cutoff.toISOString();
+  //     const proximityWeight = 0.5; // Weight for proximity score
+  //     const freshnessWeight = 0.5; // Weight for freshness score
+
+  //     // 1. Fetch listings with city distances, proximity score, and freshness score
+  //     const rawListings = await this.prisma.$queryRaw<Array<{
+  //       id: string;
+  //       created_at: Date;
+  //       title: string;
+  //       description: string;
+  //       user_id: string;
+  //       user_name: string;
+  //       user_avatar: string | null;
+  //       distance: number;
+  //       proximity_score: number;
+  //       freshness_score: number;
+  //       final_score: number;
+  //     }>>`
+  //       SELECT 
+  //         l.id,
+  //         l.created_at,
+  //         l.title,
+  //         l.description,
+  //         l.image,
+  //         l.slug,
+  //         l.status,
+  //         l.post_to_usa,
+  //         l.category,
+  //         l.sub_category,
+  //         u.id AS user_id,
+  //         u.name AS user_name,
+  //         u.avatar AS user_avatar,
+  //         ST_Distance(
+  //           c.location::geography,
+  //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+  //         ) / 1609.34 AS distance,
+  //         -- Calculate proximity score (1 / (distance + 1)) * 100
+  //         (1 / (ST_Distance(c.location::geography, ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography) / 1609.34 + 1)) * 100 AS proximity_score,
+  //         -- Calculate freshness score (100 - (hours old * 2))
+  //         GREATEST(0, 100 - EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 3600 * 2) AS freshness_score,
+  //         -- Combine proximity score and freshness score for final score
+  //         ((1 / (ST_Distance(c.location::geography, ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography) / 1609.34 + 1)) * 100 * ${proximityWeight}) + 
+  //         (GREATEST(0, 100 - EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 3600 * 2) * ${freshnessWeight}) AS final_score
+  //       FROM listings l
+  //       JOIN "_ListingCities" lc ON lc."B" = l.id
+  //       JOIN cities c ON c.id = lc."A"
+  //       JOIN users u ON u.id = l.user_id
+  //       WHERE ST_DWithin(
+  //         c.location::geography,
+  //         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //         ${radiusInMeters}
+  //       )
+  //       AND l.status = 'APPROVED'
+  //       AND l.created_at <= ${cutoffISO}::timestamp
+  //       ORDER BY final_score DESC
+  //       LIMIT ${limit}
+  //       OFFSET ${numberOfShownListings}
+  //     `;
+
+  //     // 1.2  Calculate total count of unique listings (without pagination)
+  //     const totalCountResult = await this.prisma.$queryRaw<Array<{ count: number }>>`
+  //       SELECT COUNT(DISTINCT l.id) AS count
+  //       FROM listings l
+  //       JOIN "_ListingCities" lc ON lc."B" = l.id
+  //       JOIN cities c ON c.id = lc."A"
+  //       WHERE ST_DWithin(
+  //         c.location::geography,
+  //         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //         ${radiusInMeters}
+  //       )
+  //       AND l.status = 'APPROVED'
+  //       AND l.created_at <= ${cutoffISO}::timestamp
+  //     `;
+
+  //     const totalCount = Number(totalCountResult[0].count);
+
+  //     if (!rawListings.length) {
+  //       return {
+  //         success: false,
+  //         message: 'No listings found within the specified radius',
+  //         data: {
+  //           listings: [],
+  //           numberOfShownListings: 0,
+  //           hasMore: false,
+  //           listing_cutoff_time: cutoff.toISOString(),
+  //         }
+  //       };
+  //     }
+
+  //     // {
+  //     //     listings: rawListings.map(({ final_score, user_id, user_name, user_avatar, ...rest }) => ({
+  //     //       ...rest,
+  //     //       user: {
+  //     //         id: user_id,
+  //     //         name: user_name,
+  //     //         avatar: user_avatar,
+  //     //       }
+  //     //     }))
+
+  //     // 2. Return structured result with user information and total count
+  //     return {
+  //       success: true,
+  //       message: 'Listings fetched successfully',
+  //       data: {
+  //         listings: rawListings.map(({ final_score, proximity_score, distance, freshness_score, user_id, ...rest }) => ({
+  //           ...rest,
+  //         })),
+  //         numberOfShownListings: numberOfShownListings + rawListings.length,
+  //         hasMore: numberOfShownListings + rawListings.length < totalCount,
+  //         listing_cutoff_time: cutoff.toISOString(),
+  //         totalCount: totalCount, // Total count of unique listings
+  //       }
+  //     };
+  //   } catch (error) {
+  //     console.error('Error in findNearbyListings:', error);
+  //     return {
+  //       success: false,
+  //       message: 'Failed to fetch listings',
+  //         };
+  //       }
+  //     }
+
+
+//   async findNearbyListings(
+//   lat: number,
+//   lng: number,
+//   radius: number,
+//   limit = 10,
+//   numberOfShownListings = 0,
+//   listing_cutoff_time?: string
+// ) {
+//   try {
+//     const radiusInMeters = radius * 1609.34;
+//     const now = new Date();
+//     const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+//     const cutoffISO = cutoff.toISOString();
+//     const proximityWeight = 0.5; // Weight for proximity score
+//     const freshnessWeight = 0.5; // Weight for freshness score
+
+//     // 1. Fetch listings with city distances, proximity score, and freshness score
+//     const rawListings = await this.prisma.$queryRaw<Array<{
+//       id: string;
+//       created_at: Date;
+//       title: string;
+//       description: string;
+//       user_id: string;
+//       user_name: string;
+//       user_avatar: string | null;
+//       distance: number;
+//       proximity_score: number;
+//       freshness_score: number;
+//       final_score: number;
+//     }>>`
+//       SELECT 
+//         l.id,
+//         l.created_at,
+//         l.title,
+//         l.description,
+//         l.image,
+//         l.slug,
+//         l.status,
+//         l.post_to_usa,
+//         l.category,
+//         l.sub_category,
+//         u.id AS user_id,
+//         u.name AS user_name,
+//         u.avatar AS user_avatar,
+//         ST_Distance(
+//           c.location::geography,
+//           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+//         ) / 1609.34 AS distance,
+//         -- Calculate proximity score (1 / (distance + 1)) * 100
+//         (1 / (ST_Distance(c.location::geography, ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography) / 1609.34 + 1)) * 100 AS proximity_score,
+//         -- Calculate freshness score (100 - (hours old * 2))
+//         GREATEST(0, 100 - EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 3600 * 2) AS freshness_score,
+//         -- Final score calculation combining proximity and freshness
+//         ((1 / (ST_Distance(c.location::geography, ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography) / 1609.34 + 1)) * 100 * ${proximityWeight}) + 
+//         (GREATEST(0, 100 - EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 3600 * 2) * ${freshnessWeight}) AS final_score
+//       FROM listings l
+//       JOIN "_ListingCities" lc ON lc."B" = l.id
+//       JOIN cities c ON c.id = lc."A"
+//       JOIN users u ON u.id = l.user_id
+//       WHERE ST_DWithin(
+//         c.location::geography,
+//         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+//         ${radiusInMeters}
+//       )
+//       AND l.status = 'APPROVED'
+//       AND l.created_at <= ${cutoffISO}::timestamp
+//       GROUP BY l.id, u.id, c.id  -- Group by listing ID to avoid duplicates
+//       ORDER BY final_score DESC  -- Order by final score in descending order
+//       LIMIT ${limit}
+//       OFFSET ${numberOfShownListings}
+//     `;
+
+//     // 1.2 Calculate total count of unique listings (without pagination)
+//     const totalCountResult = await this.prisma.$queryRaw<Array<{ count: number }>>`
+//       SELECT COUNT(DISTINCT l.id) AS count
+//       FROM listings l
+//       JOIN "_ListingCities" lc ON lc."B" = l.id
+//       JOIN cities c ON c.id = lc."A"
+//       WHERE ST_DWithin(
+//         c.location::geography,
+//         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+//         ${radiusInMeters}
+//       )
+//       AND l.status = 'APPROVED'
+//       AND l.created_at <= ${cutoffISO}::timestamp
+//     `;
+    
+//     const totalCount = Number(totalCountResult[0].count);
+
+//     if (!rawListings.length) {
+//       return {
+//         success: false,
+//         message: 'No listings found within the specified radius',
+//         data: {
+//           listings: [],
+//           numberOfShownListings: 0,
+//           hasMore: false,
+//           listing_cutoff_time: cutoff.toISOString(),
+//         }
+//       };
+//     }
+
+//     // 2. Return structured result with user information and total count
+//     return {
+//       success: true,
+//       message: 'Listings fetched successfully',
+//       data: {
+//         listings: rawListings.map(({ final_score, proximity_score, distance, freshness_score, user_id, ...rest }) => ({
+//           ...rest,
+          
+//         })),
+//         numberOfShownListings: numberOfShownListings + rawListings.length,
+//         hasMore: numberOfShownListings + rawListings.length < totalCount,
+//         listing_cutoff_time: cutoff.toISOString(),
+//         totalCount: totalCount, // Correct total count
+//       }
+//     };
+//   } catch (error) {
+//     console.error('Error in findNearbyListings:', error);
+//     return {
+//       success: false,
+//       message: 'Failed to fetch listings',
+//     };
+//   }
+//   }
+
+
+
+
+
+
+
+  // async findNearbyListings(
+  //   lat: number,
+  //   lng: number,
+  //   radius: number,
+  //   limit = 10,
+  //   numberOfShownListings = 0,
+  //   listing_cutoff_time?: string
+  // ) {
+  //   try {
+  //     const radiusInMeters = radius * 1609.34;
+  //     const now = new Date();
+  //     const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+
+  //     const listings = await this.prisma.$queryRaw<Array<{
+  //       id: string;
+  //       created_at: Date;
+  //       title: string;
+  //       description: string;
+  //       user_id: string;
+  //       user_name: string;
+  //       user_avatar: string | null;
+  //       distance: number;
+  //     }>>`
+  //       SELECT 
+  //         l.id,
+  //         l.created_at,
+  //         l.title,
+  //         l.description,
+  //         u.id AS user_id,
+  //         u.name AS user_name,
+  //         u.avatar AS user_avatar,
+  //         ST_Distance(
+  //           c.location::geography,
+  //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+  //         ) / 1609.34 AS distance
+  //       FROM listings l
+  //       JOIN "_ListingCities" lc ON lc."B" = l.id
+  //       JOIN cities c ON c.id = lc."A"
+  //       JOIN users u ON u.id = l.user_id
+  //       WHERE ST_DWithin(
+  //         c.location::geography,
+  //         ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //         ${radiusInMeters}
+  //       )
+  //       AND l.status = 'APPROVED'
+  //       AND l.created_at <= ${cutoff}
+  //     `;
+
+  //     if (!listings.length) {
+  //       return {
+  //         success: false,
+  //         message: 'No listings found within the specified radius',
+  //         data: {
+  //           listings: [],
+  //           numberOfShownListings: 0,
+  //           hasMore: false,
+  //           listing_cutoff_time: cutoff.toISOString(),
+  //         }
+  //       };
+  //     }
+
+  //     // 1. Score listings (proximity + freshness)
+  //     const scoredListings = listings.map(listing => {
+  //       const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
+  //       const proximityScore = (1 / (listing.distance + 1)) * 100;
+  //       const freshnessScore = Math.max(0, 100 - hoursOld * 2);
+  //       const finalScore = (proximityScore * 0.5) + (freshnessScore * 0.5);
+
+  //       return {
+  //         ...listing,
+  //         _score: finalScore,
+  //       };
+  //     });
+
+  //     // 2. Sort by _score and paginate
+  //     const sorted = scoredListings.sort((a, b) => b._score - a._score);
+  //     const paginated = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+
+  //     // 3. Return result
+  //     return {
+  //       success: true,
+  //       message: 'Listings fetched successfully',
+  //       data: {
+  //         listings: paginated.map(({ _score, user_id, user_name, user_avatar, ...rest }) => ({
+  //           ...rest,
+  //           user: {
+  //             id: user_id,
+  //             name: user_name,
+  //             avatar: user_avatar,
+  //           }
+  //         })),
+  //         numberOfShownListings: numberOfShownListings + paginated.length,
+  //         hasMore: numberOfShownListings + paginated.length < sorted.length,
+  //         listing_cutoff_time: cutoff.toISOString(),
+  //       }
+  //     };
+  //   } catch (error) {
+  //     console.error('Error in findNearbyListings:', error);
+  //     return {
+  //       success: false,
+  //       message: 'Failed to fetch listings',
+  //     };
+  //   }
+  // }
+
+
+// async findNearbyListings(
+//   lat: number,
+//   lng: number,
+//   radius: number,
+//   limit = 10,
+//   numberOfShownListings = 0,
+//   listing_cutoff_time?: string
+// ) {
+//   try {
+
+//     const radiusInMeters = radius * 1609.34;
+//     console.log("Radius in meters:", radiusInMeters, radius);
+//     const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : new Date();
+
+//     const listings = await this.prisma.$queryRaw<Array<{
+//       id: string;
+//       created_at: Date;
+//       title: string;
+//       description: string;
+//       user_id: string;
+//       user_name: string;
+//       user_avatar: string | null;
+//       distance: number;
+//     }>>`
+//       SELECT 
+//         l.id,
+//         l.created_at,
+//         l.title,
+//         l.description,
+//         u.id AS user_id,
+//         u.name AS user_name,
+//         u.avatar AS user_avatar,
+//         ST_Distance(
+//           c.location::geography,
+//           ST_SetSRID(ST_Point(-74.0060, 40.7128), 4326)::geography
+//         ) / 1609.34 AS distance
+//       FROM listings l
+//       JOIN "_ListingCities" lc ON lc."B" = l.id
+//       JOIN cities c ON c.id = lc."A"
+//       JOIN users u ON u.id = l.user_id
+//       WHERE ST_DWithin(
+//         c.location::geography,
+//         ST_SetSRID(ST_Point(-74.0060, 40.7128), 4326)::geography,
+//         ${radiusInMeters}
+//       )
+//       AND l.status = 'APPROVED'
+//       AND l.created_at <= ${cutoff};
+//     `;
+
+//     return {
+//       success: true,
+//       message: 'Listings fetched successfully',
+//       data: {
+//         count: listings.length,
+//       }
+//     };
+//   } catch (error) {
+//     console.error("Error in findNearbyListings:", error);
+//     return {
+//       success: false,
+//       message: 'Failed to fetch listings',
+//     };
+//   }
+// }
+
+
+
+
+
+
   
   // async findNearbyListings(lat: number, lng: number, radius: number) {
   //   try {
@@ -4034,6 +5369,253 @@ export class ListingsService {
   //     };
   //   }
   // }
+
+//   injectAdsWithPagination(
+//   sortedListings: any[], // full sorted listing list (not paginated yet)
+//   adGroups: AdGroupWithAds[],
+//   offset: number, // numberOfShownListings
+//   limit: number
+// ): any[] {
+//   const fullResult: any[] = [...sortedListings]; // clone base
+//   const adPointers: Record<string, number> = {}; // per group ad index
+
+//   adGroups.forEach(group => {
+//     if (group.ads.length === 0 || group.frequency <= 0) return;
+
+//     let insertIndex = group.frequency;
+//     let adIndex = 0;
+
+//     while (insertIndex <= fullResult.length + 100) {
+//       const ad = group.ads[adIndex % group.ads.length];
+//       const adItem = {
+//         ...ad,
+//         __isAd: true,
+//         group_id: group.group_id,
+//         group_name: group.group_name,
+//       };
+
+//       if (insertIndex >= fullResult.length) {
+//         fullResult.push(adItem);
+//       } else {
+//         fullResult.splice(insertIndex, 0, adItem);
+//       }
+
+//       adIndex++;
+//       insertIndex += group.frequency;
+//     }
+//   });
+
+//   // Return only the paginated slice
+//   const sliced = fullResult.slice(offset, offset + limit);
+//   return sliced;
+//   }
+  injectAdsWithPagination(
+  listings: any[],
+  adGroups: AdGroupWithAds[],
+  offset: number,
+  limit: number
+): any[] {
+  const result = [...listings];
+  const insertions: { index: number; ad: any }[] = [];
+
+  adGroups.forEach((group) => {
+    if (group.ads.length === 0 || group.frequency <= 0) return;
+
+    let insertIndex = group.frequency;
+    let adIndex = 0;
+
+    while (insertIndex <= result.length + insertions.length + 100) {
+      const ad = group.ads[adIndex % group.ads.length];
+      const adItem = {
+        ...ad,
+        __isAd: true,
+        group_id: group.group_id,
+        group_name: group.group_name,
+        frequency: group.frequency,
+      };
+
+      insertions.push({ index: insertIndex, ad: adItem });
+
+      adIndex++;
+      insertIndex += group.frequency;
+    }
+  });
+
+  // Sort insertions to make sure ads are placed in the correct order
+  insertions.sort((a, b) => a.index - b.index);
+
+  // Now inject them while adjusting for shifting indexes
+  let shift = 0;
+  for (const { index, ad } of insertions) {
+    const adjustedIndex = index + shift;
+    if (adjustedIndex >= result.length) {
+      result.push(ad);
+    } else {
+      result.splice(adjustedIndex, 0, ad);
+    }
+    shift++; // array grew by one item
+  }
+
+  return result.slice(offset, offset + limit);
+  }
+
+
+async getActiveAdGroupsWithGeoMatchedAds(
+  category: string,
+  lat: number,
+  lng: number
+): Promise<AdGroupWithAds[]> {
+  const now = new Date();
+
+  const adGroups = await this.prisma.adGroup.findMany({
+    where: {
+      display_pages: {
+        has: category as any,
+      },
+      active: true,
+      OR: [
+        {
+          start_date: {
+            lte: now,
+          },
+          end_date: {
+            gte: now,
+          },
+        },
+        {
+          start_date: null,
+          end_date: null,
+        },
+      ],
+    },
+    include: {
+      ads: {
+        where: {
+          active: true,
+          OR: [
+            {
+              adCities: {
+                some: {
+                  city: {
+                    latitude: lat,
+                    longitude: lng,
+                  },
+                },
+              },
+            },
+            {
+              adCities: {
+                none: {},
+              },
+            },
+          ],
+        },
+        include: {
+          adCities: {
+            include: {
+              city: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const result: AdGroupWithAds[] = adGroups.map((group) => ({
+    group_id: group.id,
+    group_name: group.name,
+    display_pages: group.display_pages,
+    frequency: group.frequency,
+    ads: group.ads.map((ad) => ({
+      id: ad.id,
+      name: ad.name,
+      target_url: ad.target_url,
+      image_url: ad.image,
+      views: ad.views || 0,
+      clicks: ad.clicks || 0,
+    })),
+  }));
+
+  return result.filter((group) => group.ads.length > 0);
+}
+
+
+  // async  getActiveAdGroupsWithGeoMatchedAds(
+  //   category: string,
+  //   lat: number,
+  //   lng: number
+  // ): Promise<AdGroupWithAds[]> {
+  //   const now = new Date();
+    
+  //   const adGroups =  await this.prisma.adGroup.findMany({
+  //     where: {
+  //       display_pages: {
+  //         has: category as any
+  //       },
+  //       active: true,
+  //       OR: [
+  //         {
+  //           start_date: {
+  //             lte: now
+  //           },
+  //           end_date: {
+  //             gte: now
+  //           }
+  //         },
+  //         {
+  //           start_date: null,
+  //           end_date: null
+  //         }
+  //       ]
+  //     },
+  //     include: {
+  //       ads: {
+  //         where: {
+  //           active: true,
+  //           adCities: {
+  //             some: {
+  //               city: {
+  //                 latitude: lat,
+  //                 longitude: lng
+  //               }
+  //             }
+  //           }
+  //         },
+  //         include: {
+  //           adCities: {
+  //             include: {
+  //               city: true
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //   });
+
+  //   // Transform the data to match the desired output format
+  //   const result: AdGroupWithAds[] = adGroups.map(group => ({
+  //     group_id: group.id,
+  //     group_name: group.name,
+  //     display_pages: group.display_pages,
+  //     frequency: group.frequency,
+  //     ads: group.ads.map(ad => ({
+  //       id: ad.id,
+  //       name: ad.name,
+  //       target_url: ad.target_url,
+  //       image_url: ad.image,
+  //       views: ad.views || 0,
+  //       clicks: ad.clicks || 0
+  //     }))
+  //   }));
+
+  //   // // Filter out ad groups that have no matching ads
+  //   return result.filter(group => group.ads.length > 0);
+
+  //   // return result;
+  // }
+
+// Example usage:
+// const activeAdGroups = await getActiveAdGroupsWithGeoMatchedAds('homepage', 40.7128, -74.0060);
 
 
 

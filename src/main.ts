@@ -13,11 +13,17 @@ import { CustomExceptionFilter } from './common/exception/custom-exception.filte
 import { SojebStorage } from './common/lib/Disk/SojebStorage';
 import appConfig from './config/app.config';
 // import { PrismaService } from './prisma/prisma.service';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
   });
+
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  
 
   // Handle raw body for webhooks
   // app.use('/payment/stripe/webhook', express.raw({ type: 'application/json' }));
@@ -30,6 +36,7 @@ async function bootstrap() {
   // });
   // set cookie parser
   app.use(cookieParser());
+  // app.use(cookieParser.default());
   app.enableCors({
     origin: [process.env.CLIENT_URL, 'http://192.168.5.8:8080',  'http://192.168.4.42:8080'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

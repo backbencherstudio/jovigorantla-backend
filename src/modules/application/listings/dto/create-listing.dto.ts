@@ -99,7 +99,6 @@ export class CreateListingDto {
   description?: string;
 
 
-
   @IsOptional()
   @Transform(({ value }) => {
     if (value === 'true' || value === true) {

@@ -73,6 +73,22 @@ export class CreateAdsGroupDto {
     @IsUrl({}, { message: 'Target URL must be a valid URL' })
     target_url?: string;
 
+    @IsArray()
+    @IsOptional()
+    cities?: {
+      name: string;
+      slug: string;
+      country: string;
+      state?: string;
+      latitude: number;
+      longitude: number;
+      address: string;
+      boundary: {
+        type: string;
+        coordinates: number[][][];
+      };
+    }[];
+
     @IsOptional()
     @IsBoolean()
     active?: boolean;

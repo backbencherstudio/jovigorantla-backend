@@ -97,6 +97,7 @@ export class CreateAdDto {
     state?: string;
     latitude: number;
     longitude: number;
+    address: string;
     boundary: {
       type: string;
       coordinates: number[][][];

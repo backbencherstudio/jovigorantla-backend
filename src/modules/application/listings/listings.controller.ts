@@ -55,6 +55,36 @@ export class ListingsController {
     }
   }
 
+  @Post('bulk-create')
+  async bulkCreate(@Body() createListingsDto: any[], @Req() req: Request) {
+    console.log('Bulk create listings:', createListingsDto);
+    try {
+      const userId = req?.user?.userId || "";
+      const listingsWithUserId = createListingsDto.map(listing => ({
+        ...listing,
+        user_id: userId,
+      }));
+      console.log('Bulk create listings with user ID:', listingsWithUserId);
+      return await this.listingsService.bulkCreate(listingsWithUserId);
+    }
+    catch (error) {
+      console.error('Error creating listings (controller):', error);
+      return {
+        success: false,
+        message: 'Failed to create listings',
+      }
+    }
+  }
+
+  @Public()
+  @Get('test')
+  test() {
+    return {
+      success: true,
+      message: 'Test endpoint is working',
+    };
+  }
+
   @Public()
   @Get("nearby")
   async getNearByListings(
@@ -63,11 +93,22 @@ export class ListingsController {
     try {
 
       // Example usage
-      const lat = 40.7128; // Latitude for New York
-      const lng = -74.006; // Longitude for New York
-      const radius = 5; // 5miles radius
+      // const lat = 40.7128; // Latitude for New York
+      // const lng = -74.006; // Longitude for New York
+      // const radius = 5; // 5miles radius
 
-      return await this.listingsService.findNearbyListings(lat, lng, radius);
+      return await this.listingsService.findNearbyListings(
+        nearByDto?.lat, 
+        nearByDto?.lng, 
+        nearByDto?.radius, 
+        nearByDto?.limit, 
+        nearByDto.numberOfShownListings, 
+        nearByDto?.listing_cutoff_time,
+        nearByDto?.category,
+        nearByDto?.sub_category,
+        nearByDto?.search,
+        nearByDto?.is_usa,
+      );
     } catch (error) {
       // console.log(error);
       return {
