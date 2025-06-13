@@ -18,7 +18,7 @@
 // //     @IsArray()
 // //     @IsString({ each: true })
 // //     cities: string[];
-    
+
 // // }
 
 // // create-ad.dto.ts
@@ -91,16 +91,8 @@ export class CreateAdDto {
   @IsArray()
   @IsOptional()
   cities?: {
-    name: string;
-    slug: string;
-    country: string;
-    state?: string;
     latitude: number;
     longitude: number;
     address: string;
-    boundary: {
-      type: string;
-      coordinates: number[][][];
-    };
   }[];
 }

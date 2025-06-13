@@ -13,7 +13,7 @@ import { ListingsQueryDto } from './dto/get-flagged-listing.dto';
 @Roles(Role.ADMIN)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ListingsController {
-  constructor(private readonly listingsService: ListingsService) {}
+  constructor(private readonly listingsService: ListingsService) { }
 
   // @Post()
   // async create(@Body() createListingDto: CreateListingDto) {
@@ -50,7 +50,7 @@ export class ListingsController {
   }
 
   @Get('usa-listings')
-  async getUsaListings(@Query()listingsQueryDto: ListingsQueryDto) {
+  async getUsaListings(@Query() listingsQueryDto: ListingsQueryDto) {
     try {
       return await this.listingsService.getUsaListings(listingsQueryDto);
     } catch (error) {
@@ -63,7 +63,7 @@ export class ListingsController {
 
   // get flagged listings history
   @Get('flagged-listings-history')
-  async getFlaggedListingsHistory(@Query()listingsHitoryDto: ListingsQueryDto) {
+  async getFlaggedListingsHistory(@Query() listingsHitoryDto: ListingsQueryDto) {
     try {
       return await this.listingsService.getFlaggedListingsHitory(listingsHitoryDto);
     } catch (error) {
@@ -77,7 +77,7 @@ export class ListingsController {
 
   // get flagged listings history
   @Get('usa-listings-history')
-  async getUsaListingsHistory(@Query()listingsHitoryDto: ListingsQueryDto) {
+  async getUsaListingsHistory(@Query() listingsHitoryDto: ListingsQueryDto) {
     try {
       return await this.listingsService.getUsaListingsHitory(listingsHitoryDto);
     } catch (error) {
@@ -88,21 +88,95 @@ export class ListingsController {
     }
   }
 
-
-
-  @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateListingDto: UpdateListingDto) {
+  @Patch('flagged-listings/:id/approved')
+  async approveFlaggedListing(@Param('id') id: string) {
     try {
-      return await this.listingsService.update(id, updateListingDto);
+      return await this.listingsService.updateReportStatus(id, 'APPROVED');
     } catch (error) {
       return {
         success: false,
-        message: 'Failed to update listing',
+        message: 'Failed to approve flagged listing',
       }
     }
   }
 
-  
+  @Patch('flagged-listings/:id/blocked')
+  async blockFlaggedListing(@Param('id') id: string) {
+    try {
+      return await this.listingsService.updateReportStatus(id, 'BLOCKED');
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to block flagged listing',
+      }
+    }
+  }
+
+  @Patch('flagged-listings/:id/deleted')
+  async deleteFlaggedListing(@Param('id') id: string) {
+    try {
+      return await this.listingsService.updateReportStatus(id, 'DELETED');
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to delete flagged listing',
+      }
+    }
+  }
+
+  @Patch('usa-listings/:id/approved')
+  async approveUsaListing(@Param('id') id: string) {
+    try {
+      return await this.listingsService.updateUsaListingStatus(id, 'APPROVED');
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to approve USA listing',
+      }
+    }
+  }
+
+  @Patch('usa-listings/:id/blocked')
+  async blockUsaListing(@Param('id') id: string) {
+    try {
+      return await this.listingsService.updateUsaListingStatus(id, 'BLOCKED');
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to block USA listing',
+      }
+    }
+  }
+
+  @Patch('usa-listings/:id/deleted')
+  async deleteUsaListing(@Param('id') id: string) {
+    try {
+      return await this.listingsService.updateUsaListingStatus(id, 'DELETED');
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to delete USA listing',
+      }
+    }
+  }
+
+
+
+
+
+  // @Patch(':id')
+  // async update(@Param('id') id: string, @Body() updateListingDto: UpdateListingDto) {
+  //   try {
+  //     return await this.listingsService.update(id, updateListingDto);
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: 'Failed to update listing',
+  //     }
+  //   }
+  // }
+
+
 
   // @Delete(':id')
   // remove(@Param('id') id: string) {

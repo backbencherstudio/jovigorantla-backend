@@ -20,7 +20,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mailService: MailService,
-  ) {}
+  ) { }
 
   async me(userId: string) {
     try {
@@ -169,6 +169,14 @@ export class AuthService {
       },
     });
 
+    if (user?.status === 0) {
+      throw new UnauthorizedException('Your account is blocked');
+      // return {
+      //   success: false,
+      //   message: 'Your account is blocked',
+      // };
+    }
+
     if (user) {
       const _isValidPassword = await UserRepository.validatePassword({
         email: email,
@@ -196,6 +204,7 @@ export class AuthService {
         }
         return result;
       } else {
+
         throw new UnauthorizedException('Password not matched');
         // return {
         //   success: false,
@@ -214,7 +223,12 @@ export class AuthService {
   async googleLogin(email: string, name: string) {
     try {
       const user = await UserRepository.getUserByEmail(email);
-
+      if (user && user.status === 0) {
+        return {
+          success: false,
+          message: 'Your account is blocked',
+        };
+      }
       if (user) {
         const payload = { email: email, sub: user.id, role: user.type };
         const token = this.jwtService.sign(payload);
@@ -270,8 +284,8 @@ export class AuthService {
   // }
 
 
-  
-  async login({ email, userId, res }: { email: string; userId: string; res: any}) {
+
+  async login({ email, userId, res }: { email: string; userId: string; res: any }) {
     // const payload = { username: user.username, sub: user.userId };
     // const token = this.jwtService.sign(payload);
     try {
@@ -287,10 +301,10 @@ export class AuthService {
         maxAge: 24 * 60 * 60 * 1000 * 30, // 30 day
       });
 
-    return { 
-      success: true,
-      message: 'Logged in successfully',
-     };
+      return {
+        success: true,
+        message: 'Logged in successfully',
+      };
     } catch (error) {
       return {
         success: false,
@@ -437,7 +451,7 @@ export class AuthService {
   }
 
 
-  async sendOtp(email: string){
+  async sendOtp(email: string) {
     try {
 
       // check if email exist in users table
@@ -480,7 +494,7 @@ export class AuthService {
         success: true,
         message: 'We have sent an OTP code to your email',
       };
-     
+
     } catch (error) {
       return {
         success: false,
@@ -489,7 +503,7 @@ export class AuthService {
     }
   }
 
-  async verifyOtp(email: string, otp : string) {
+  async verifyOtp(email: string, otp: string) {
     try {
       const record = await this.prisma.verificationCode.findFirst({
         where: {
@@ -498,8 +512,8 @@ export class AuthService {
           expiresAt: { gte: new Date() },
         },
       });
-    
-      if (!record){
+
+      if (!record) {
         // delete verification code
         await this.prisma.verificationCode.delete({
           where: {
@@ -533,7 +547,7 @@ export class AuthService {
   }
 
 
-  
+
 
   async forgotPassword(email) {
     try {

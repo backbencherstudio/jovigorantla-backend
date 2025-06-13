@@ -16,6 +16,17 @@ import { FindAllQueryDto } from './dto/find-all-query.dto';
 export class ListingsController {
   constructor(private readonly listingsService: ListingsService) { }
 
+  @Get()
+  async findAll(@Req() req: Request) {
+    try {
+      return await this.listingsService.findAll(req?.user?.userId);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to get listings',
+      }
+    }
+  }
 
   @Post()
   @UseInterceptors(
@@ -98,11 +109,11 @@ export class ListingsController {
       // const radius = 5; // 5miles radius
 
       return await this.listingsService.findNearbyListings(
-        nearByDto?.lat, 
-        nearByDto?.lng, 
-        nearByDto?.radius, 
-        nearByDto?.limit, 
-        nearByDto.numberOfShownListings, 
+        nearByDto?.lat,
+        nearByDto?.lng,
+        nearByDto?.radius,
+        nearByDto?.limit,
+        nearByDto.numberOfShownListings,
         nearByDto?.listing_cutoff_time,
         nearByDto?.category,
         nearByDto?.sub_category,
@@ -115,7 +126,7 @@ export class ListingsController {
         success: false,
         message: 'Failed to get nearby listings',
       }
-    } 
+    }
   }
 
   // @Public()
@@ -147,64 +158,77 @@ export class ListingsController {
   //   }
   // }
 
-  // @Public()
-  // @Get(':idOrSlug')
-  // async findOne(@Param('idOrSlug') idOrSlug: string) {
-  //   try {
-  //     return await this.listingsService.findOne(idOrSlug);
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Failed to get listing',
-  //     }
-  //   }
-  // }
+  @Post(':id/report')
+  async reportListing(@Param('id') id: string, @Req() req: Request, @Body() reportDto: { report_type: string }) {
+    try {
+      const userId = req?.user?.userId || "";
+      return await this.listingsService.reportListing(id, userId, reportDto?.report_type);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to report listing',
+      }
+    }
+  }
 
-  // @Patch(':id')
-  // @UseInterceptors(
-  //   FileInterceptor('image', {
-  //     storage: diskStorage({
-  //       destination:
-  //         appConfig().storageUrl.rootUrl + appConfig().storageUrl.listing,
-  //       filename: (req, file, cb) => {
-  //         const randomName = Array(32)
-  //           .fill(null)
-  //           .map(() => Math.round(Math.random() * 16).toString(16))
-  //           .join('');
-  //         return cb(
-  //           null,
-  //           `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
-  //         );
-  //       },
-  //     }),
-  //     limits: {
-  //       fileSize: 5 * 1024 * 1024, // 5MB in bytes
-  //     },
-  //   }),
-  // )
-  // async update(@Param('id') id: string, @Body() updateListingDto: UpdateListingDto, @UploadedFile() image: Express.Multer.File, @Req() req: Request) {
-  //   try {
-  //     updateListingDto.user_id = req?.user?.userId || "";
-  //     return await this.listingsService.update(id, updateListingDto, image);
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Failed to update listing',
-  //     }
-  //   }
-  // }
+  @Public()
+  @Get(':idOrSlug')
+  async findOne(@Param('idOrSlug') idOrSlug: string) {
+    try {
+      return await this.listingsService.findOne(idOrSlug);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to get listing',
+      }
+    }
+  }
 
-  // @Delete(':id')
-  // async remove(@Param('id') id: string, @Req() req: Request) {
-  //   try {
-  //     return await this.listingsService.remove(id, req?.user?.userId);
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Failed to delete listing',
-  //     }
-  //   }
-  // }
+  @Patch(':id')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination:
+          appConfig().storageUrl.rootUrl + appConfig().storageUrl.listing,
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          return cb(
+            null,
+            `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
+          );
+        },
+      }),
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB in bytes
+      },
+    }),
+  )
+  async update(@Param('id') id: string, @Body() updateListingDto: UpdateListingDto, @UploadedFile() image: Express.Multer.File, @Req() req: Request) {
+    try {
+      updateListingDto.user_id = req?.user?.userId || "";
+      return await this.listingsService.update(id, updateListingDto, image);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to update listing',
+      }
+    }
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Req() req: Request) {
+    try {
+      return await this.listingsService.remove(id, req?.user?.userId);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to delete listing',
+      }
+    }
+  }
 
   // // testing
   // @Post('bulk')
