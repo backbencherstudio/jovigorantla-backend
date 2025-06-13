@@ -211,11 +211,14 @@ export class ListingsService {
       if (search) {
         whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
       }
-      if (is_usa !== undefined) {
-        whereConditions += ` AND l.post_to_usa = ${is_usa}`;
+
+      console.log("Where conditions:", is_usa);
+
+      if (is_usa === true) {
+        whereConditions += ` AND l.post_to_usa = true`;
         whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
       } else {
-        whereConditions += ` AND l.post_to_usa = false`;
+        whereConditions += ` AND l.status = 'APPROVED'`;
       }
 
       // Build the complete query
@@ -252,7 +255,7 @@ export class ListingsService {
       // Rest of your processing logic remains the same...
       if (!rawListings.length) {
         return {
-          success: false,
+          success: true,
           message: 'No listings found within the specified radius',
           data: {
             listings: [],
