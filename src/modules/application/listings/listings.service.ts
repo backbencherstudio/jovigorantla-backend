@@ -187,8 +187,8 @@ export class ListingsService {
       const now = new Date();
       const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
       const cutoffISO = cutoff.toISOString();
-      const proximityWeight = 0;
-      const freshnessWeight = 1;
+      const proximityWeight = .5;
+      const freshnessWeight = .5;
 
       // Start building the WHERE conditions
       let whereConditions = `
