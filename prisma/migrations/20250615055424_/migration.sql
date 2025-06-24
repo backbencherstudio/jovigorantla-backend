@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "listings" ADD COLUMN     "radius" DOUBLE PRECISION NOT NULL DEFAULT 0;
