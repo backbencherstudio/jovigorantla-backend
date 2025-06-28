@@ -5,6 +5,7 @@ import { MailService } from './mail.service';
 import appConfig from 'src/config/app.config';
 import { BullModule } from '@nestjs/bullmq';
 import { MailProcessor } from './processors/mail.processor';
+import { ResendModule } from 'nestjs-resend';
 
 @Global()
 @Module({
@@ -36,6 +37,9 @@ import { MailProcessor } from './processors/mail.processor';
     }),
     BullModule.registerQueue({
       name: 'bbs-queue',
+    }),
+    ResendModule.forRoot({
+      apiKey: appConfig().resend.api_key,
     }),
   ],
   providers: [MailService, MailProcessor],

@@ -47,6 +47,10 @@ export default () => ({
     from: process.env.MAIL_FROM_NAME,
   },
 
+  resend: {
+    api_key: process.env.RESEND_API_KEY,
+  },
+
   auth: {
     google: {
       app_id: process.env.GOOGLE_APP_ID,

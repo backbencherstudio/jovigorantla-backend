@@ -6,7 +6,7 @@ import { Role } from 'src/common/guard/role/role.enum';
 import { Roles } from 'src/common/guard/role/roles.decorator';
 
 @Controller('admin/pages')
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.CO_ADMIN)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PagesController {
   constructor(private readonly pagesService: PagesService) {}

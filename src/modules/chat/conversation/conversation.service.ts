@@ -271,41 +271,41 @@ export class ConversationService {
 
   async findAll(user_id: string) {
     try {
-      const cs = await this.prisma.conversation.findMany({
-        where: {
-          AND: [
-            {
-              OR: [
-                {
-                  creator_id: user_id,
-                  deleted_by_creator: null,
-                },
-                {
-                  participant_id: user_id,
-                  deleted_by_participant: null,
-                },
-              ],
-            },
-            {
-              listing: {
-                // only include conversations that have a linked listing
-                isNot: null,
-              },
-            },
-          ],
-        },
-        orderBy: {
-          updated_at: 'desc',
-        },
-        select: {
-          id: true,
-          creator_id: true,
-          participant_id: true,
-          listing: true,
-        },
-      });
+      // const cs = await this.prisma.conversation.findMany({
+      //   where: {
+      //     AND: [
+      //       {
+      //         OR: [
+      //           {
+      //             creator_id: user_id,
+      //             deleted_by_creator: null,
+      //           },
+      //           {
+      //             participant_id: user_id,
+      //             deleted_by_participant: null,
+      //           },
+      //         ],
+      //       },
+      //       {
+      //         listing: {
+      //           // only include conversations that have a linked listing
+      //           isNot: null,
+      //         },
+      //       },
+      //     ],
+      //   },
+      //   orderBy: {
+      //     updated_at: 'desc',
+      //   },
+      //   select: {
+      //     id: true,
+      //     creator_id: true,
+      //     participant_id: true,
+      //     listing: true,
+      //   },
+      // });
 
-      console.log("cs =>", cs)
+      // console.log("cs =>", cs)
       // console.log(user_id)
       const conversations = await this.prisma.conversation.findMany({
         // where: {

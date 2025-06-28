@@ -1,11 +1,198 @@
-<p>Hey</p>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Verification Code</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #fff;
+      font-family: Arial, sans-serif;
+    "
+  >
+  
+    <table
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      style="background-color: #fff"
+    >
+      <tr>
+        <td align="center">
 
-<p>
-  This is your otp: <b><%= otp %></b>
-</p>
+          <table
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              max-width: 600px;
+              border: 0px solid #e0e0e0;
+              border-radius: 8px;
+              padding: 30px;
+              background-color: #ffffff;
+            "
+          >
 
-<p>
-  Regards,
-  <br />
-  <%= process.env.APP_NAME %>
-</p>
+            <!-- Logo -->
+            <tr>
+              <td align="left" style="padding-bottom: 20px; ">
+                <img src="https://iili.io/FBjvdps.png" alt="Desieasy Logo" width="120" style="display: block;" />
+              </td>
+            </tr>
+
+            <!-- Instruction -->
+            <tr>
+              <td
+                align="left"
+                style="font-size: 16px; color: #333333; padding-bottom: 25px;font-weight: 600"
+              >
+                Enter the code below to verify your email:
+              </td>
+            </tr>
+
+            <!-- OTP Code -->
+            <tr>
+              <td
+                align="center"
+                style="
+                  font-size: 40px;
+                  font-weight: bold;
+                  color: #000000;
+                  padding-bottom: 25px;
+                "
+              >
+              <%= otp %>
+              </td>
+            </tr>
+
+            <!-- Info Note -->
+            <tr>
+              <td
+                align="left"
+                style="font-size: 14px; color: #333333; padding-bottom: 5px;font-weight: 500"
+              >
+                If you didn’t request this, feel free to ignore this email.
+              </td>
+            </tr>
+
+            <!-- Support Contact -->
+            <tr>
+              <td align="left" style="font-size: 14px; color: #333333; padding-bottom: 20px;font-weight: 500">
+                Need help? Contact us at
+                <a href="mailto:support@desieasy.com" style="color: #007bff; text-decoration: none;";
+                  >support@desieasy.com</a
+                >
+              </td>
+            </tr>
+
+          </table>
+          
+          <table 
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              max-width: 100%;
+              width: 100%;
+              padding-top: 10px;
+              padding-bottom: 80px;
+              background-color: #F4F4F4;
+            ">
+
+             <!-- Social Media Icons -->
+            <tr style="background-color: #F4F4F4;">
+              <td align="center" style="padding-top: 10px; padding-bottom: 10px;">
+
+                <!-- X -->
+                <a
+                  href="https://x.com/desieasyteam"
+                  target="_blank"
+                  style="
+                    display: inline-block;
+                    background-color: #666666;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 4px;
+                  "
+                > 
+
+                <img src="https://iili.io/FBhlR4V.png" style="width: 20px; height: 20px; object-fit: contain; display: block; margin:auto;">
+                
+                </a>
+
+                <!-- Facebook -->
+                <a
+                  href="https://www.facebook.com/desieasy"
+                  target="_blank"
+                  style="
+                    display: inline-block;
+                    background-color: #666666;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 4px;
+                  "
+                >
+                
+                  <img src="https://iili.io/FBhl73B.png" style="width: 20px; height: 20px; object-fit: contain; display: block; margin:auto;">
+
+                </a>
+
+                <!-- YouTube -->
+                <a
+                  href="https://www.youtube.com/@desieasy"
+                  target="_blank"
+                  style="
+                    display: inline-block;
+                    background-color: #666666;
+                    border-radius: 50%;
+                     width: 40px;
+                    height: 40px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 4px;
+                  "
+                >
+
+                 <img src="https://iili.io/FBhlAEQ.png" style="width: 20px; height: 20px; object-fit: contain; display: block; margin:auto;">
+
+                </a>
+
+                <!-- Instagram -->
+                <a
+                  href="https://www.instagram.com/desieasyofficial/"
+                  target="_blank"
+                  style="
+                    display: inline-block;
+                    background-color: #666666;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 4px;
+                  "
+                >
+                   <img src="https://iili.io/FBhSqFI.png" style="width: 20px; height: 20px; object-fit: contain; display: block; margin:auto;">
+
+                </a>
+              </td>
+            </tr>
+
+          </table>
+
+        </td>
+      </tr>
+    </table>
+
+  </body>
+</html>

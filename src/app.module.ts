@@ -21,6 +21,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { ChatModule } from './modules/chat/chat.module';
 import { PaymentModule } from './modules/payment/payment.module';
 
+import { ThrottlerModule } from '@nestjs/throttler';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -58,6 +60,15 @@ import { PaymentModule } from './modules/payment/payment.module';
     //   },
     // ]),
     // General modules
+    ThrottlerModule.forRoot({
+      throttlers: [
+        // These are defaults that can be overridden at the route level
+        {
+          ttl: 60000, // 1 minute in milliseconds
+          limit: 10, // default limit that won't be used since we'll override per route
+        },
+      ],
+    }),
     PrismaModule,
     AuthModule,
     AbilityModule,
@@ -77,6 +88,10 @@ import { PaymentModule } from './modules/payment/payment.module';
     // disbling throttling for dev {
     //   provide: APP_GUARD,
     //   useClass: ThrottlerBehindProxyGuard,
+    // },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: CustomThrottlerGuard, // ✅ Only here
     // },
     AppService,
   ],

@@ -25,7 +25,7 @@ import { Request } from 'express';
 @ApiBearerAuth()
 @ApiTags('Website Info')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.CO_ADMIN)
 @Controller('admin/website-info')
 export class WebsiteInfoController {
   constructor(private readonly websiteInfoService: WebsiteInfoService) {}

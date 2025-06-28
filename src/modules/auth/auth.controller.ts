@@ -25,7 +25,9 @@ import appConfig from '../../config/app.config';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { Throttle } from '@nestjs/throttler';
 @ApiTags('auth')
+@Throttle({ default: { limit: 10, ttl: 30 * 60 * 1000 } })
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) { }
@@ -144,7 +146,7 @@ export class AuthController {
         type: type,
         otp: otp
       });
-
+      
       return response;
     } catch (error) {
       return {

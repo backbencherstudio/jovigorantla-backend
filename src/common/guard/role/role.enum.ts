@@ -7,4 +7,5 @@ export enum Role {
   SUPPORT_TEAM = 'support_team',
   TECHNICAL_TEAM = 'technical_team',
   USER = 'user',
+  CO_ADMIN = 'co_admin',
 }

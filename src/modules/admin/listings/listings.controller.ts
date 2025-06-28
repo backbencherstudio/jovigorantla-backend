@@ -10,7 +10,7 @@ import { ListingsQueryDto } from './dto/get-flagged-listing.dto';
 
 
 @Controller('admin/listings')
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.CO_ADMIN)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ListingsController {
   constructor(private readonly listingsService: ListingsService) { }

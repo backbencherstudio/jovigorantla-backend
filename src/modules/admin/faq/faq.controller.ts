@@ -20,7 +20,7 @@ import { RolesGuard } from '../../../common/guard/role/roles.guard';
 @ApiBearerAuth()
 @ApiTags('Faq')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.CO_ADMIN)
 @Controller('admin/faq')
 export class FaqController {
   constructor(private readonly faqService: FaqService) {}
