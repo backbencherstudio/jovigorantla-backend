@@ -160,7 +160,9 @@ export class ListingsService {
           message: 'Listing created successfully',
           data: newListing,
         };
-      });
+      }, 
+        { timeout: 100000 }
+      );
     } catch (error) {
       console.error("Listing creation error:", error);
       return {
