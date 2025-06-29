@@ -1,4 +1,4 @@
-import AWS from 'aws-sdk';
+import * as AWS from 'aws-sdk';
 import { IStorage } from './iStorage';
 import { DiskOption } from '../Option';
 
