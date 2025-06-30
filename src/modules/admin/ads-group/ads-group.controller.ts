@@ -3,7 +3,7 @@ import { AdsGroupService } from './ads-group.service';
 import { CreateAdsGroupDto } from './dto/create-ads-group.dto';
 import { UpdateAdsGroupDto } from './dto/update-ads-group.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 import appConfig from 'src/config/app.config';
 import { Roles } from 'src/common/guard/role/roles.decorator';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
@@ -21,20 +21,21 @@ export class AdsGroupController {
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: diskStorage({
-        destination:
-          appConfig().storageUrl.rootUrl + appConfig().storageUrl.ads,
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          return cb(
-            null,
-            `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
-          );
-        },
-      }),
+      // storage: diskStorage({
+      //   destination:
+      //     appConfig().storageUrl.rootUrl + appConfig().storageUrl.ads,
+      //   filename: (req, file, cb) => {
+      //     const randomName = Array(32)
+      //       .fill(null)
+      //       .map(() => Math.round(Math.random() * 16).toString(16))
+      //       .join('');
+      //     return cb(
+      //       null,
+      //       `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
+      //     );
+      //   },
+      // }),
+      storage: memoryStorage(),
       limits: {
         fileSize: 5 * 1024 * 1024, // 5MB in bytes
       },

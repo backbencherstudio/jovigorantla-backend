@@ -14,10 +14,12 @@ export class S3Adapter implements IStorage {
     const awsConfig = {
       endpoint: this._config.connection.awsEndpoint,
       region: this._config.connection.awsDefaultRegion,
-      credentials: {
-        accessKeyId: this._config.connection.awsAccessKeyId,
-        secretAccessKey: this._config.connection.awsSecretAccessKey,
-      },
+      accessKeyId: this._config.connection.awsAccessKeyId,
+      secretAccessKey: this._config.connection.awsSecretAccessKey,
+      // credentials: {
+      //   accessKeyId: this._config.connection.awsAccessKeyId,
+      //   secretAccessKey: this._config.connection.awsSecretAccessKey,
+      // },
     };
     if (this._config.connection.minio) {
       // s3ForcePathStyle: true, // Required for MinIO
@@ -42,7 +44,7 @@ export class S3Adapter implements IStorage {
     if (this._config.connection.minio) {
       return `${this._config.connection.awsEndpoint}/${this._config.connection.awsBucket}/${key}`;
     }
-    return `${this._config.connection.awsBucket}.s3.${this._config.connection.awsDefaultRegion}.amazonaws.com/${key}`;
+    return `https://${this._config.connection.awsBucket}.s3.${this._config.connection.awsDefaultRegion}.amazonaws.com/${key}`;
   }
 
   /**

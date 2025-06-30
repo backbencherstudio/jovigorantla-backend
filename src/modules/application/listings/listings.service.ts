@@ -62,7 +62,7 @@ export class ListingsService {
         };
       }
 
-      
+
 
       // Process within a transaction
       return await this.prisma.$transaction(async (prisma) => {
@@ -109,7 +109,7 @@ export class ListingsService {
 
         // console.log(cities[0])
 
-        
+
         const isUsa = otherData?.post_to_usa === true || (otherData?.post_to_usa as any) === "true";
         // console.log("Is usa => ", isUsa)
 
@@ -139,8 +139,18 @@ export class ListingsService {
           }
           data.slug = slug;
         }
+        if (image) {
+          // upload image
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
 
-        if (image) data.image = image.filename;
+          await SojebStorage.put("listing/" + fileName, image.buffer);
+
+          data.image = fileName;
+        }
 
         // Create listing with city connections
         const newListing = await prisma.listing.create({
@@ -160,7 +170,7 @@ export class ListingsService {
           message: 'Listing created successfully',
           data: newListing,
         };
-      }, 
+      },
         { timeout: 100000 }
       );
     } catch (error) {
@@ -244,7 +254,7 @@ export class ListingsService {
       //     AND l.usa_listing_status = 'APPROVED'
       //     AND l.created_at <= '${cutoffISO}'::timestamp;
       // `);
-      
+
 
       // console.log("Test => ", test)
       // Start building the WHERE conditions
@@ -268,12 +278,12 @@ export class ListingsService {
       if (search) {
         whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
       }
-      
+
       // console.log("Is usa => ", is_usa)
- 
+
       if (is_usa === true) {
         whereConditions += ` AND l.post_to_usa = true`;
-        whereConditions += ` AND l.usa_listing_status = 'APPROVED'`; 
+        whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
       } else {
         whereConditions += ` AND l.status = 'APPROVED'`;
       }
@@ -654,9 +664,10 @@ export class ListingsService {
   ): Promise<AdGroupWithAds[]> {
     const now = new Date();
 
-    
-    const pages = ["", "RIDES", "MARKETPLACE", "JOBS", "ACCOMMODATIONS"]
-    if(!pages.includes(category)) {
+    // console.log("Category:", category)
+
+    const pages = ["HOME", "RIDES", "MARKETPLACE", "JOBS", "ACCOMMODATIONS"]
+    if (!pages.includes(category)) {
       return [];
     }
 
@@ -777,10 +788,10 @@ export class ListingsService {
     try {
       const listing = await this.prisma.listing.findFirst({
         where: {
-         OR: [
-          { id: idOrSlug },
-          { slug: idOrSlug },
-        ],
+          OR: [
+            { id: idOrSlug },
+            { slug: idOrSlug },
+          ],
         },
         include: {
           user: {
@@ -858,7 +869,14 @@ export class ListingsService {
         if (existingListing.image) {
           await SojebStorage.delete(appConfig().storageUrl.listing + existingListing.image);
         }
-        data.image = image.filename;
+        const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+
+          await SojebStorage.put("listing/" + fileName, image.buffer);
+          data.image = fileName
       }
 
       // Generate slug if title is provided
@@ -872,7 +890,7 @@ export class ListingsService {
         }
         data.slug = slug;
       }
-    
+
       // filter cities latitude and longitude and address
       const filteredCities = updateListingDto.cities.filter(city => city.latitude && city.longitude && city.address);
 
@@ -883,7 +901,7 @@ export class ListingsService {
         data.longitude = filteredCities[0].longitude;
         data.address = filteredCities[0].address;
 
-       
+
         // Find or create cities
         const cityIds = await Promise.all(
           filteredCities.map(async (city) => {
