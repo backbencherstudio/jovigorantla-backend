@@ -3,7 +3,7 @@ import { ListingsService } from './listings.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 import appConfig from 'src/config/app.config';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { Request } from 'express';
@@ -32,21 +32,22 @@ export class ListingsController {
   @UseInterceptors(
     FileInterceptor('image',
       {
-        storage: diskStorage({
-          destination:
-            appConfig().storageUrl.rootUrl + appConfig().storageUrl.listing,
-          filename: (req, file, cb) => {
-            const randomName = Array(32)
-              .fill(null)
-              .map(() => Math.round(Math.random() * 16).toString(16))
-              .join('');
-            return cb(
-              null,
-              `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
-            );
-          },
-        }
-        ),
+        // storage: diskStorage({
+        //   destination:
+        //     appConfig().storageUrl.rootUrl + appConfig().storageUrl.listing,
+        //   filename: (req, file, cb) => {
+        //     const randomName = Array(32)
+        //       .fill(null)
+        //       .map(() => Math.round(Math.random() * 16).toString(16))
+        //       .join('');
+        //     return cb(
+        //       null,
+        //       `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
+        //     );
+        //   },
+        // }
+        // ),
+        storage: memoryStorage(),
         limits: {
           fileSize: 5 * 1024 * 1024, // 5MB in bytes
         },
@@ -187,20 +188,21 @@ export class ListingsController {
   @Patch(':id')
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: diskStorage({
-        destination:
-          appConfig().storageUrl.rootUrl + appConfig().storageUrl.listing,
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          return cb(
-            null,
-            `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
-          );
-        },
-      }),
+      // storage: diskStorage({
+      //   destination:
+      //     appConfig().storageUrl.rootUrl + appConfig().storageUrl.listing,
+      //   filename: (req, file, cb) => {
+      //     const randomName = Array(32)
+      //       .fill(null)
+      //       .map(() => Math.round(Math.random() * 16).toString(16))
+      //       .join('');
+      //     return cb(
+      //       null,
+      //       `${randomName}${file.originalname.replace(/\s+/g, '-')}`,
+      //     );
+      //   },
+      // }),
+      storage: memoryStorage(),
       limits: {
         fileSize: 5 * 1024 * 1024, // 5MB in bytes
       },

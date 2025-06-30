@@ -277,11 +277,19 @@ export class AdsService {
       // Create transaction for atomic operations
       const result = await this.prisma.$transaction(async (prisma) => {
         // Create the ad
+        const randomName = Array(32)
+          .fill(null)
+          .map(() => Math.round(Math.random() * 16).toString(16))
+          .join('');
+        const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+
+        await SojebStorage.put("ads/" + fileName, image.buffer);
+
         const ad = await prisma.ad.create({
           data: {
             name: createAdDto.name,
             target_url: createAdDto.target_url,
-            image: image.filename,
+            image: fileName,
             ad_group_id: createAdDto.ad_group_id,
             active: true,
             views: 0,
@@ -325,6 +333,8 @@ export class AdsService {
         }
 
         return ad;
+      }, {
+        timeout: 1000000, // 1000 seconds
       });
 
       // Generate image URL
@@ -551,7 +561,17 @@ export class AdsService {
       const data: any = {};
       if (updateAdDto.target_url) data.target_url = updateAdDto.target_url;
       if (updateAdDto.name) data.name = updateAdDto.name;
-      if (image) data.image = image.filename;
+      if (image) {
+        const randomName = Array(32)
+          .fill(null)
+          .map(() => Math.round(Math.random() * 16).toString(16))
+          .join('');
+        const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+
+        await SojebStorage.put("ads/" + fileName, image.buffer);
+
+        data.image = fileName
+      };
       if (updateAdDto.active == true || updateAdDto.active == false) data.active = updateAdDto.active;
       if (updateAdDto.ad_group_id) data.ad_group_id = updateAdDto.ad_group_id;
 
@@ -682,7 +702,6 @@ export class AdsService {
       });
 
       if (sidebarTop) {
-
         if (image) {
           SojebStorage.delete(
             appConfig().storageUrl.ads + sidebarTop.image,
@@ -690,7 +709,16 @@ export class AdsService {
         }
 
         const data: any = {}
-        if (image) data.image = image.filename;
+        if (image) {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+          await SojebStorage.put("ads/" + fileName, image.buffer);
+
+          data.image = fileName
+        };
         if (createSidebarAdDto.target_url) data.target_url = createSidebarAdDto.target_url;
         if (createSidebarAdDto.active == true || createSidebarAdDto.active == false) data.active = createSidebarAdDto.active;
 
@@ -734,9 +762,17 @@ export class AdsService {
         }
       }
 
+      const randomName = Array(32)
+       .fill(null)
+       .map(() => Math.round(Math.random() * 16).toString(16))
+       .join('');
+      const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+
+       await SojebStorage.put("ads/" + fileName, image.buffer)
+
       const createSidebarTop = await this.prisma.sideBarAd.create({
         data: {
-          image: image.filename,
+          image: fileName,
           target_url: createSidebarAdDto.target_url,
           add_type: "TOP",
         },
@@ -818,7 +854,16 @@ export class AdsService {
         }
 
         const data: any = {}
-        if (image) data.image = image.filename;
+        if (image) {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+
+          await SojebStorage.put("ads/" + fileName, image.buffer);
+          data.image = fileName
+        };
         if (createSidebarAdDto.target_url) data.target_url = createSidebarAdDto.target_url;
         if (createSidebarAdDto.active == true || createSidebarAdDto.active == false) data.active = createSidebarAdDto.active;
 
@@ -861,9 +906,18 @@ export class AdsService {
         }
       }
 
+      const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+
+          await SojebStorage.put("ads/" + fileName, image.buffer);
+          
+
       const createSidebarBottom = await this.prisma.sideBarAd.create({
         data: {
-          image: image.filename,
+          image: fileName,
           target_url: createSidebarAdDto.target_url,
           add_type: "BOTTOM",
         },

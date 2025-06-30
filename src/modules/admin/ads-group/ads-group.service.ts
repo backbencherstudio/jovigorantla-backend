@@ -25,12 +25,21 @@ export class AdsGroupService {
 
       if (createAdsGroupDto.ad_name && createAdsGroupDto.target_url && image) {
         await this.prisma.$transaction(async (prisma) => {
+
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+
+          await SojebStorage.put("ads/" + fileName, image.buffer);
+
           // Create the ad
           const ad = await prisma.ad.create({
             data: {
               name: createAdsGroupDto.ad_name,
               target_url: createAdsGroupDto.target_url,
-              image: image.filename,
+              image: fileName,
               ad_group_id: adGroup.id,
               active: true,
               views: 0,
@@ -74,6 +83,8 @@ export class AdsGroupService {
           }
 
           return ad;
+        }, {
+          timeout: 1000000,
         });
 
         // 
@@ -99,6 +110,7 @@ export class AdsGroupService {
       }
 
     } catch (error) {
+      console.log(error);
       return {
         success: false,
         message: "ads group create failed",

@@ -23,7 +23,7 @@ async function bootstrap() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-  
+
 
   // Handle raw body for webhooks
   // app.use('/payment/stripe/webhook', express.raw({ type: 'application/json' }));
@@ -38,11 +38,11 @@ async function bootstrap() {
   app.use(cookieParser());
   // app.use(cookieParser.default());
   app.enableCors({
-    origin: [process.env.CLIENT_URL, 'http://192.168.5.8:8080',  'http://192.168.4.42:8080'],
+    origin: [process.env.CLIENT_URL, 'http://192.168.5.8:8080', 'http://192.168.4.42:8080'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
-   
+
 
 
   app.use(helmet(
@@ -75,7 +75,7 @@ async function bootstrap() {
       awsSecretAccessKey: appConfig().fileSystems.s3.secret,
       awsDefaultRegion: appConfig().fileSystems.s3.region,
       awsEndpoint: appConfig().fileSystems.s3.endpoint,
-      // minio: true,
+      // minio: false,
     },
   });
   // prisma setup
@@ -95,7 +95,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
   // end swagger
 
- 
+
   await app.listen(process.env.PORT ?? 4000, '0.0.0.0');
 }
 bootstrap();

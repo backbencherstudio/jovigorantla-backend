@@ -75,13 +75,13 @@ export default () => ({
     // storage directory
     package: '/package/',
     destination: '/destination/',
-    blog: '/blog/',
-    ads: '/ads/',
-    listing: '/listing/',
-    avatar: '/avatar/',
-    websiteInfo: '/website-info/',
+    blog: 'blog/',
+    ads: 'ads/',
+    listing: 'listing/',
+    avatar: 'avatar/',
+    websiteInfo: 'website-info/',
     // chat
-    attachment: '/attachment/',
+    attachment: 'attachment/',
   },
 
   defaultUser: {
