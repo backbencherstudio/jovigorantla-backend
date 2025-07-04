@@ -97,7 +97,7 @@ export class MailProcessor extends WorkerHost {
             html: htmlContent
           })
 
-          console.log(res, 'RES')
+          // console.log(res, 'RES')
           // console.log(htmlContent, 'HTML')
           // console.log(job.data, job.data.context)
           break;

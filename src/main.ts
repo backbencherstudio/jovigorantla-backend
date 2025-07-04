@@ -38,11 +38,10 @@ async function bootstrap() {
   app.use(cookieParser());
   // app.use(cookieParser.default());
   app.enableCors({
-    origin: [process.env.CLIENT_URL, 'http://192.168.5.8:8080', 'http://192.168.4.42:8080'],
+    origin: [process.env.CLIENT_URL, 'http://192.168.5.8:8080', 'http://192.168.4.42:8080',  'https://7647-137-59-180-113.ngrok-free.app/'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
-
 
 
   app.use(helmet(

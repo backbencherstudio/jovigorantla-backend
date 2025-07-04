@@ -859,6 +859,11 @@ export class ListingsService {
         // data.usa_listing_status = ListingStatus.PENDING
       };
       if (updateListingDto.radius) data.radius = Number(updateListingDto.radius);
+      if(updateListingDto.address && updateListingDto.latitude && updateListingDto.longitude) {
+        data.address = updateListingDto.address;
+        data.latitude = updateListingDto.latitude;
+        data.longitude = updateListingDto.longitude;
+      }
 
 
 
@@ -891,15 +896,17 @@ export class ListingsService {
         data.slug = slug;
       }
 
+    
+
       // filter cities latitude and longitude and address
       const filteredCities = updateListingDto.cities.filter(city => city.latitude && city.longitude && city.address);
 
       // If cities are provided, handle them
       if (filteredCities && filteredCities.length > 0) {
-        // updated address, latitude, longitude
-        data.latitude = filteredCities[0].latitude;
-        data.longitude = filteredCities[0].longitude;
-        data.address = filteredCities[0].address;
+        // // updated address, latitude, longitude
+        // data.latitude = filteredCities[0].latitude;
+        // data.longitude = filteredCities[0].longitude;
+        // data.address = filteredCities[0].address;
 
 
         // Find or create cities
