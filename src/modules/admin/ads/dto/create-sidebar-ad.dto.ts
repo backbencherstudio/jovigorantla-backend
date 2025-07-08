@@ -1,12 +1,12 @@
 
 import { Transform } from "class-transformer";
-import { IsBoolean, IsOptional, IsUrl,  } from "class-validator";
+import { IsBoolean, IsOptional, IsString, IsUrl,  } from "class-validator";
 
 
 
 export class CreateSidebarAdDto {
   @IsOptional()
-  @IsUrl()
+  @IsString()
   target_url: string;
 
   @IsOptional()

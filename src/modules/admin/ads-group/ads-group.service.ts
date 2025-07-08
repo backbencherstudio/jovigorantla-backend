@@ -23,7 +23,7 @@ export class AdsGroupService {
         data
       })
 
-      if (createAdsGroupDto.ad_name && createAdsGroupDto.target_url && image) {
+      if (image) {
         await this.prisma.$transaction(async (prisma) => {
 
           const randomName = Array(32)
@@ -37,8 +37,8 @@ export class AdsGroupService {
           // Create the ad
           const ad = await prisma.ad.create({
             data: {
-              name: createAdsGroupDto.ad_name,
-              target_url: createAdsGroupDto.target_url,
+              name: createAdsGroupDto.ad_name || "",
+              target_url: createAdsGroupDto.target_url || "",
               image: fileName,
               ad_group_id: adGroup.id,
               active: true,
@@ -46,6 +46,8 @@ export class AdsGroupService {
               clicks: 0
             }
           });
+
+          // console.log("ad => ", ad)
 
           // Process cities if provided
           if (createAdsGroupDto.cities?.length) {
@@ -122,7 +124,11 @@ export class AdsGroupService {
     try {
       const add_groups = await this.prisma.adGroup.findMany({
         include: {
-          ads: true
+          ads: {
+            orderBy: {
+              created_at: 'asc',
+            },
+          }
         },
         orderBy: {
           created_at: 'asc',

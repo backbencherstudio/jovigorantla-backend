@@ -442,7 +442,7 @@ model Report {
 
 model AdGroup {
   id            String            @id @default(cuid())
-  name          String
+  name          String?
   frequency     Int
   start_date    DateTime?
   end_date      DateTime?
@@ -457,9 +457,9 @@ model AdGroup {
 
 model Ad {
   id          String   @id @default(cuid())
-  name        String
-  target_url  String
-  image       String
+  name        String?
+  target_url  String?
+  image       String?
   active      Boolean? @default(true)
   ad_group_id String
   views       Int?     @default(0)
@@ -504,7 +504,7 @@ model AdCity {
 model SideBarAd {
   id         String        @id @default(cuid())
   name       String?
-  target_url String
+  target_url String?
   image      String
   clicks     Int?          @default(0)
   views      Int?          @default(0)

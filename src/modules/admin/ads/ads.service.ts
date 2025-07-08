@@ -263,8 +263,8 @@ export class AdsService {
     try {
       // Validate required fields
       if (!image) throw new Error("Image is required");
-      if (!createAdDto.target_url) throw new Error("Target URL is required");
-      if (!createAdDto.name) throw new Error("Name is required");
+      // if (!createAdDto.target_url) throw new Error("Target URL is required");
+      // if (!createAdDto.name) throw new Error("Name is required");
       if (!createAdDto.ad_group_id) throw new Error("Ad group ID is required");
 
       // Verify ad group exists
@@ -719,13 +719,17 @@ export class AdsService {
 
           data.image = fileName
         };
-        if (createSidebarAdDto.target_url) data.target_url = createSidebarAdDto.target_url;
+        
+        data.target_url = createSidebarAdDto.target_url;
         if (createSidebarAdDto.active == true || createSidebarAdDto.active == false) data.active = createSidebarAdDto.active;
 
-        if (createSidebarAdDto?.target_url && (sidebarTop?.target_url !== createSidebarAdDto.target_url)) {
-          data.views = 0;
-          data.clicks = 0;
-        }
+        // if (createSidebarAdDto?.target_url && (sidebarTop?.target_url !== createSidebarAdDto.target_url)) {
+        //   data.views = 0;
+        //   data.clicks = 0;
+        // }
+
+        data.views = 0;
+        data.clicks = 0;
 
 
         const updateSidebarTop = await this.prisma.sideBarAd.update({
@@ -864,13 +868,16 @@ export class AdsService {
           await SojebStorage.put("ads/" + fileName, image.buffer);
           data.image = fileName
         };
-        if (createSidebarAdDto.target_url) data.target_url = createSidebarAdDto.target_url;
+        data.target_url = createSidebarAdDto.target_url;
         if (createSidebarAdDto.active == true || createSidebarAdDto.active == false) data.active = createSidebarAdDto.active;
 
-        if (createSidebarAdDto?.target_url && (sidebarBottom?.target_url !== createSidebarAdDto.target_url)) {
-          data.views = 0;
-          data.clicks = 0;
-        }
+        // if (createSidebarAdDto?.target_url && (sidebarBottom?.target_url !== createSidebarAdDto.target_url)) {
+        //   data.views = 0;
+        //   data.clicks = 0;
+        // }
+
+        data.views = 0;
+        data.clicks = 0;
 
         const updateSidebarBottom = await this.prisma.sideBarAd.update({
           where: {

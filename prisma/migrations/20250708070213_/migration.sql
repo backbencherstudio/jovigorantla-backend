@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "ad_groups" ALTER COLUMN "name" DROP NOT NULL;
+
+-- AlterTable
+ALTER TABLE "ads" ALTER COLUMN "name" DROP NOT NULL,
+ALTER COLUMN "target_url" DROP NOT NULL,
+ALTER COLUMN "image" DROP NOT NULL;
