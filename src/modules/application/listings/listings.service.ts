@@ -174,7 +174,7 @@ export class ListingsService {
         { timeout: 100000 }
       );
     } catch (error) {
-      console.error("Listing creation error:", error);
+      // console.error("Listing creation error:", error);
       return {
         success: false,
         message: 'Failed to create listing',
@@ -258,35 +258,63 @@ export class ListingsService {
 
       // console.log("Test => ", test)
       // Start building the WHERE conditions
-      let whereConditions = `
-            WHERE ST_DWithin(
-                c.location::geography,
-                ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
-                ${radiusInMeters}
-            )
-            AND l.created_at <= '${cutoffISO}'::timestamp
-        `;
+      // let whereConditions = `
+      //       WHERE ST_DWithin(
+      //           c.location::geography,
+      //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+      //           ${radiusInMeters}
+      //       )
+      //       AND l.created_at <= '${cutoffISO}'::timestamp
+      //   `;
 
-      // Add filters conditionally
-      if (category) {
-        whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
-      }
-      if (sub_category) {
-        whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
-      }
+      // // Add filters conditionally
+      // if (category) {
+      //   whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
+      // }
+      // if (sub_category) {
+      //   whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
+      // }
 
-      if (search) {
-        whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
-      }
+      // if (search) {
+      //   whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
+      // }
 
-      // console.log("Is usa => ", is_usa)
+      // // console.log("Is usa => ", is_usa)
 
-      if (is_usa === true) {
-        whereConditions += ` AND l.post_to_usa = true`;
-        whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
-      } else {
-        whereConditions += ` AND l.status = 'APPROVED'`;
-      }
+      // if (is_usa === true) {
+      //   whereConditions += ` AND l.post_to_usa = true`;
+      //   whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
+      // } else {
+      //   whereConditions += ` AND l.status = 'APPROVED'`;
+      // }
+
+
+      // Start building the WHERE conditions
+    let whereConditions = ` WHERE l.created_at <= '${cutoffISO}'::timestamp`;
+
+    // If is_usa is true, bypass the proximity check and apply the USA-specific filters
+    if (is_usa === true) {
+      whereConditions += ` AND l.post_to_usa = true`;
+      whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
+    } else {
+      whereConditions += `
+        AND ST_DWithin(
+          c.location::geography,
+          ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+          ${radiusInMeters}
+        )`;
+    }
+
+    // Add category, sub_category, and search filters conditionally
+    if (category) {
+      whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
+    }
+    if (sub_category) {
+      whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
+    }
+    if (search) {
+      whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
+    }
 
 
       // Build the complete query
