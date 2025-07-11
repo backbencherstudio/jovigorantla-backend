@@ -290,31 +290,31 @@ export class ListingsService {
 
 
       // Start building the WHERE conditions
-    let whereConditions = ` WHERE l.created_at <= '${cutoffISO}'::timestamp`;
+      let whereConditions = ` WHERE l.created_at <= '${cutoffISO}'::timestamp`;
 
-    // If is_usa is true, bypass the proximity check and apply the USA-specific filters
-    if (is_usa === true) {
-      whereConditions += ` AND l.post_to_usa = true`;
-      whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
-    } else {
-      whereConditions += `
+      // If is_usa is true, bypass the proximity check and apply the USA-specific filters
+      if (is_usa === true) {
+        whereConditions += ` AND l.post_to_usa = true`;
+        whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
+      } else {
+        whereConditions += `
         AND ST_DWithin(
           c.location::geography,
           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
           ${radiusInMeters}
         )`;
-    }
+      }
 
-    // Add category, sub_category, and search filters conditionally
-    if (category) {
-      whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
-    }
-    if (sub_category) {
-      whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
-    }
-    if (search) {
-      whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
-    }
+      // Add category, sub_category, and search filters conditionally
+      if (category) {
+        whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
+      }
+      if (sub_category) {
+        whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
+      }
+      if (search) {
+        whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
+      }
 
 
       // Build the complete query
@@ -754,20 +754,56 @@ export class ListingsService {
       },
     });
 
-    const result: AdGroupWithAds[] = adGroups.map((group) => ({
-      group_id: group.id,
-      group_name: group.name,
-      display_pages: group.display_pages,
-      frequency: group.frequency,
-      ads: group.ads.map((ad) => ({
-        id: ad.id,
-        name: ad.name,
-        target_url: ad.target_url,
-        image_url: ad.image,
-        views: ad.views || 0,
-        clicks: ad.clicks || 0,
-      })),
-    }));
+    // const result: AdGroupWithAds[] = adGroups.map((group) => ({
+    //   group_id: group.id,
+    //   group_name: group.name,
+    //   display_pages: group.display_pages,
+    //   frequency: group.frequency,
+    //   ads: group.ads.map((ad) => ({
+    //     id: ad.id,
+    //     name: ad.name,
+    //     target_url: ad.target_url,
+    //     image_url: ad.image,
+    //     views: ad.views || 0,
+    //     clicks: ad.clicks || 0,
+    //   })),
+    // }));
+
+    // Increment the views for each ad
+    const result: AdGroupWithAds[] = await Promise.all(
+      adGroups.map(async (group) => {
+        const updatedAds = await Promise.all(
+          group.ads.map(async (ad) => {
+            // Increment the views by 1
+            const updatedAd = await this.prisma.ad.update({
+              where: { id: ad.id },
+              data: {
+                views: {
+                  increment: 1,
+                },
+              },
+            });
+
+            return {
+              id: updatedAd.id,
+              name: updatedAd.name,
+              target_url: updatedAd.target_url,
+              image_url: updatedAd.image,
+              views: updatedAd.views,
+              clicks: updatedAd.clicks || 0,
+            };
+          })
+        );
+
+        return {
+          group_id: group.id,
+          group_name: group.name,
+          display_pages: group.display_pages,
+          frequency: group.frequency,
+          ads: updatedAds,
+        };
+      })
+    );
 
     return result.filter((group) => group.ads.length > 0);
   }
@@ -887,7 +923,7 @@ export class ListingsService {
         // data.usa_listing_status = ListingStatus.PENDING
       };
       if (updateListingDto.radius) data.radius = Number(updateListingDto.radius);
-      if(updateListingDto.address && updateListingDto.latitude && updateListingDto.longitude) {
+      if (updateListingDto.address && updateListingDto.latitude && updateListingDto.longitude) {
         data.address = updateListingDto.address;
         data.latitude = updateListingDto.latitude;
         data.longitude = updateListingDto.longitude;
@@ -903,13 +939,13 @@ export class ListingsService {
           await SojebStorage.delete(appConfig().storageUrl.listing + existingListing.image);
         }
         const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+          .fill(null)
+          .map(() => Math.round(Math.random() * 16).toString(16))
+          .join('');
+        const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
 
-          await SojebStorage.put("listing/" + fileName, image.buffer);
-          data.image = fileName
+        await SojebStorage.put("listing/" + fileName, image.buffer);
+        data.image = fileName
       }
 
       // Generate slug if title is provided
@@ -924,7 +960,7 @@ export class ListingsService {
         data.slug = slug;
       }
 
-    
+
 
       // filter cities latitude and longitude and address
       const filteredCities = updateListingDto.cities.filter(city => city.latitude && city.longitude && city.address);
