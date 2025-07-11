@@ -56,10 +56,13 @@ export class ListingsController {
   )
   async create(@Req() req: Request, @Body() createListingDto: any, @UploadedFile() image: Express.Multer.File) {
     try {
+      // console.log("form controller", createListingDto);
+      console.log("image", image)
       createListingDto.user_id = req.user.userId;
       createListingDto.cities = JSON.parse(createListingDto.cities);
       return await this.listingsService.create(createListingDto, image);;
     } catch (error) {
+      // console.log("form controller", error);
       return {
         success: false,
         message: 'Failed to create listing',

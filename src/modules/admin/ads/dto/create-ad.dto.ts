@@ -79,9 +79,11 @@
 import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class CreateAdDto {
+  @IsOptional()
   @IsString()
   name: string;
 
+  @IsOptional()
   @IsString()
   target_url: string;
 

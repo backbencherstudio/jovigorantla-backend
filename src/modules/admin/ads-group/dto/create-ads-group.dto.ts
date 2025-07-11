@@ -66,7 +66,6 @@ export class CreateAdsGroupDto {
   // Optional: Create First Ad
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   ad_name?: string;
 
   @IsOptional()

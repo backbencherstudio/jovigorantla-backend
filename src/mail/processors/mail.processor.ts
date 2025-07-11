@@ -91,7 +91,7 @@ export class MailProcessor extends WorkerHost {
 
 
           const res = await this.resendService.send({
-            from: 'support@desieasy.com',
+            from: '"Desieasy" <support@desieasy.com>',
             to: job.data.to,
             subject: `${job.data.context.otp} is your Desieasy verification code`,
             html: htmlContent
