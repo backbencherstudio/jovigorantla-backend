@@ -313,7 +313,7 @@ export class ListingsService {
         this.prisma.report.update({
           where: { id: reportId },
           data: {
-            status: newStatus,
+            status: newStatus,  
             updated_at: new Date(),
           },
         })
@@ -651,6 +651,133 @@ export class ListingsService {
       }
     }
   }
+
+
+  async reverseReportStatusUpdate(
+    reportId: string
+  ) {
+    try {
+      const report = await this.prisma.report.findUnique({
+        where: { id: reportId },
+        include: {
+          listing: {
+            select: {
+              id: true,
+              user_id: true,
+            },
+          },
+        },
+      });
+  
+      if (!report) {
+        return {
+          success: false,
+          message: 'Report not found',
+        };
+      }
+
+      // check report status
+      if (report.status === 'PENDING') {
+        return {
+          success: false,
+          message: 'Report status is already PENDING',
+        };
+      }
+
+      // check report type
+      if (report.report_type === 'POST_TO_USA') {
+        
+      }else{
+
+      }
+
+
+  
+      return {
+        success: true,
+        message: `Report status reversed successfully.`,
+      };
+    } catch (error) {
+      console.error('Error in reverseReportStatusUpdate:', error);
+      return {
+        success: false,
+        message: 'Failed to reverse report status',
+      };
+    }
+  }
+
+
+  async reverseUsaListingStatusUpdate(
+    listingId: string,
+    previousStatus: 'APPROVED' | 'BLOCKED' | 'DELETED'
+  ) {
+    try {
+      const listing = await this.prisma.listing.findUnique({
+        where: { id: listingId },
+        select: {
+          id: true,
+          user_id: true,
+          post_to_usa: true,
+        },
+      });
+  
+      if (!listing) {
+        return {
+          success: false,
+          message: 'Listing not found',
+        };
+      }
+  
+      if (!listing.post_to_usa) {
+        return {
+          success: false,
+          message: 'This is not a USA listing',
+        };
+      }
+  
+      const updateTasks: Promise<any>[] = [];
+  
+      // 1. Reverse the USA listing status
+      updateTasks.push(
+        this.prisma.listing.update({
+          where: { id: listingId },
+          data: {
+            usa_listing_status: previousStatus, // Revert to previous status
+            updated_at: new Date(),
+          },
+        })
+      );
+  
+      // 2. If previously blocked, unblock the user
+      if (previousStatus === 'BLOCKED') {
+        updateTasks.push(
+          this.prisma.user.update({
+            where: { id: listing.user_id },
+            data: {
+              status: 1, // Unblock user
+              updated_at: new Date(),
+            },
+          })
+        );
+      }
+  
+      // Execute all reverse updates in parallel
+      await Promise.all(updateTasks);
+  
+      return {
+        success: true,
+        message: `USA listing status reversed successfully.`,
+      };
+    } catch (error) {
+      console.error('Error in reverseUsaListingStatusUpdate:', error);
+      return {
+        success: false,
+        message: 'Failed to reverse USA listing status',
+      };
+    }
+  }
+  
+  
 
 
   // remove(id: number) {

@@ -14,6 +14,7 @@ import { SojebStorage } from './common/lib/Disk/SojebStorage';
 import appConfig from './config/app.config';
 // import { PrismaService } from './prisma/prisma.service';
 import * as express from 'express';
+import * as session from 'express-session';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -22,6 +23,13 @@ async function bootstrap() {
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(
+    session({
+      secret: 'your-secret-key',
+      resave: false,
+      saveUninitialized: true,
+    }),
+  );
 
 
 

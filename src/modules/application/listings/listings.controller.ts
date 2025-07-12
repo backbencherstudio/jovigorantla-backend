@@ -103,7 +103,8 @@ export class ListingsController {
   @Public()
   @Get("nearby")
   async getNearByListings(
-    @Query() nearByDto: NearbyListingsQueryDto
+    @Query() nearByDto: NearbyListingsQueryDto,
+    @Req() req: Request,
   ) {
     try {
 
@@ -123,6 +124,7 @@ export class ListingsController {
         nearByDto?.sub_category,
         nearByDto?.search,
         nearByDto?.is_usa,
+        req.session
       );
     } catch (error) {
       // console.log(error);

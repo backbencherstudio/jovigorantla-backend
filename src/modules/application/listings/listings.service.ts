@@ -216,7 +216,8 @@ export class ListingsService {
     category?: string,
     sub_category?: string,
     search?: string,
-    is_usa?: boolean
+    is_usa?: boolean,
+    userSession?: any,
   ) {
     try {
       const radiusInMeters = radius * 1609.34;
@@ -396,7 +397,7 @@ export class ListingsService {
       const groupsWithAds = await this.getActiveAdGroupsWithGeoMatchedAds(category || 'HOME', lat, lng);
 
       // 👉 inject ads AFTER slicing `limit` listings
-      const listingsWithAds = this.injectAds(limitedListings, groupsWithAds, numberOfShownListings);
+      const listingsWithAds = this.injectAds(limitedListings, groupsWithAds, numberOfShownListings, userSession);
 
       // then return
       return {
@@ -541,10 +542,13 @@ export class ListingsService {
     }
   }
 
+
+
   injectAds(
     listings: any[],
-    adGroups: AdGroupWithAds[],
-    numberOfShownListings: number = 0
+    adGroups: any[],
+    numberOfShownListings: number = 0,
+    userSession: any // Assuming session is passed in from the controller
   ): any[] {
     const result = [...listings];
     const insertions: { index: number; ad: any }[] = [];
@@ -552,37 +556,250 @@ export class ListingsService {
     adGroups.forEach((group) => {
       if (group.ads.length === 0 || group.frequency <= 0) return;
 
-      // Calculate how many listings we need to see *after the last ad* before showing the next one
+      // Retrieve the last shown ad index for the user from the session
+      const lastAdIndex = userSession?.lastAdIndex?.[group.group_id] || 0;
+
+      // Calculate the position where the next ad will be injected
       const sinceLastAd = numberOfShownListings % group.frequency;
       const listingsUntilNextAd = group.frequency - sinceLastAd;
 
-      let nextAdPos = listingsUntilNextAd; // 1-based position in new listings
-      let adIndex = 0;
+      let nextAdPos = listingsUntilNextAd; // Position for the first ad insertion
+      let adIndex = (lastAdIndex + Math.floor(numberOfShownListings / group.frequency)) % group.ads.length;
 
       while (nextAdPos <= result.length) {
         const ad = group.ads[adIndex % group.ads.length];
+
         insertions.push({
-          index: nextAdPos, // Convert to 0-based index
-          ad: {
-            ...ad,
-            __isAd: true,
-            group_id: group.group_id,
-            group_name: group.group_name,
-          },
+          index: nextAdPos,
+          ad: { ...ad, __isAd: true, group_id: group.group_id, group_name: group.group_name },
         });
 
         adIndex++;
-        nextAdPos += group.frequency; // Jump to next frequency interval
+        nextAdPos += group.frequency;
       }
+
+      // Check if userSession.lastAdIndex exists, if not, initialize it
+      if (!userSession.lastAdIndex) {
+        userSession.lastAdIndex = {};
+      }
+
+      // Now assign the ad index to the appropriate group
+      userSession.lastAdIndex[group.group_id] = adIndex % group.ads.length;
+      // Update the last shown ad index for the user in the session
+      // userSession?.lastAdIndex?.[group.group_id] = adIndex % group.ads.length;
     });
 
-    // Insert ads from highest to lowest index (avoid shifting issues)
+    // Insert the ads in the correct order
     insertions.sort((a, b) => b.index - a.index).forEach(({ index, ad }) => {
       result.splice(index, 0, ad);
     });
 
     return result;
   }
+
+  // injectAds(
+  //   listings: any[],
+  //   adGroups: AdGroupWithAds[],
+  //   numberOfShownListings: number = 0, // Total listings shown before the current page
+  //   itemsPerPage: number // Number of listings per page
+  // ) {
+  //   const result = [...listings];
+  //   const insertions: { index: number; ad: any }[] = [];
+
+  //   adGroups.forEach((group) => {
+  //     if (group.ads.length === 0 || group.frequency <= 0) return;
+
+  //     // Calculate the total number of ads shown for this group before the current page
+  //     const totalAdsShownPreviously = Math.floor(numberOfShownListings / group.frequency);
+
+  //     // Calculate the starting ad index for this group
+  //     let adIndex = totalAdsShownPreviously % group.ads.length;
+
+  //     // Calculate the position of the first ad in the current page
+  //     const sinceLastAd = numberOfShownListings % group.frequency;
+  //     let nextAdPos = sinceLastAd === 0 ? group.frequency : group.frequency - sinceLastAd;
+
+  //     // Insert ads within the current page
+  //     while (nextAdPos < itemsPerPage && nextAdPos <= result.length) {
+  //       const ad = group.ads[adIndex % group.ads.length];
+
+  //       insertions.push({
+  //         index: nextAdPos,
+  //         ad: {
+  //           ...ad,
+  //           __isAd: true,
+  //           group_id: group.group_id,
+  //           group_name: group.group_name,
+  //         },
+  //       });
+
+  //       adIndex++;
+  //       nextAdPos += group.frequency;
+  //     }
+  //   });
+
+  //   // Sort insertions by index in descending order to avoid shifting issues
+  //   insertions.sort((a, b) => b.index - a.index).forEach(({ index, ad }) => {
+  //     result.splice(index, 0, ad);
+  //   });
+
+  //   return result;
+  // }
+
+
+
+
+
+  // injectAds(
+  //   listings: any[],
+  //   adGroups: AdGroupWithAds[],
+  //   numberOfShownListings: number = 0
+  // ): any[] {
+  //   const result = [...listings];
+  //   const insertions: { index: number; ad: any }[] = [];
+
+  //   adGroups.forEach((group) => {
+  //     if (group.ads.length === 0 || group.frequency <= 0) return;
+
+  //     // Calculate how many listings we need to see after the last ad before showing the next one
+  //     const sinceLastAd = numberOfShownListings % group.frequency;
+  //     const listingsUntilNextAd = group.frequency - sinceLastAd;
+
+  //     let nextAdPos = listingsUntilNextAd; // Position for the first ad insertion
+  //     const totalAdsShownPreviously = Math.floor(numberOfShownListings / group.frequency);
+
+  //     // Track the ad index based on total ads shown previously
+  //     let adIndex = totalAdsShownPreviously % group.ads.length; 
+
+  //     // Now, we start inserting ads at the correct position and continue through pagination
+  //     while (nextAdPos <= result.length) {
+  //       const ad = group.ads[adIndex % group.ads.length]; // Get the ad based on adIndex
+
+  //       insertions.push({
+  //         index: nextAdPos, // Insert the ad at the calculated position
+  //         ad: {
+  //           ...ad,
+  //           __isAd: true,
+  //           group_id: group.group_id,
+  //           group_name: group.group_name,
+  //         },
+  //       });
+
+  //       // Move to the next position for the next ad
+  //       adIndex++;
+  //       nextAdPos += group.frequency; // Skip to the next interval
+  //     }
+  //   });
+
+  //   // Insert the ads in the correct order (highest index first)
+  //   insertions.sort((a, b) => b.index - a.index).forEach(({ index, ad }) => {
+  //     result.splice(index, 0, ad);
+  //   });
+
+  //   return result;
+  // }
+
+
+
+
+  // injectAds(
+  //   listings: any[],
+  //   adGroups: AdGroupWithAds[],
+  //   numberOfShownListings: number = 0
+  // ): any[] {
+  //   const result = [...listings];
+  //   const insertions: { index: number; ad: any }[] = [];
+
+  //   adGroups.forEach((group) => {
+  //     if (group.ads.length === 0 || group.frequency <= 0) return;
+
+  //     // Calculate how many listings we need to see *after the last ad* before showing the next one
+  //     const sinceLastAd = numberOfShownListings % group.frequency;
+  //     const listingsUntilNextAd = group.frequency - sinceLastAd;
+
+  //     let nextAdPos = listingsUntilNextAd; // 1-based position in new listings
+  //     const totalAdsShownPreviously = Math.floor(numberOfShownListings / group.frequency);
+  //     let adIndex = totalAdsShownPreviously % group.ads.length;
+  //     // let adIndex = 0;
+
+  //     while (nextAdPos <= result.length) {
+  //       const ad = group.ads[adIndex % group.ads.length];
+  //       insertions.push({
+  //         index: nextAdPos, // Convert to 0-based index
+  //         ad: {
+  //           ...ad,
+  //           __isAd: true,
+  //           group_id: group.group_id,
+  //           group_name: group.group_name,
+  //         },
+  //       });
+
+  //       adIndex++;
+  //       nextAdPos += group.frequency; // Jump to next frequency interval
+  //     }
+  //   });
+
+  //   // Insert ads from highest to lowest index (avoid shifting issues)
+  //   insertions.sort((a, b) => b.index - a.index).forEach(({ index, ad }) => {
+  //     result.splice(index, 0, ad);
+  //   });
+
+  //   return result;
+  // }
+
+
+  // injectAdsWithPagination(
+  //   listings: any[],
+  //   adGroups: AdGroupWithAds[],
+  //   numberOfShownListings: number = 0
+  // ): any[] {
+  //   const result = [...listings];
+  //   const insertions: { index: number; ad: any }[] = [];
+
+  //   adGroups.forEach((group) => {
+  //     if (group.ads.length === 0 || group.frequency <= 0) return;
+
+  //     // Calculate the global position range for this batch
+  //     const startGlobalPos = numberOfShownListings;
+  //     const endGlobalPos = numberOfShownListings + listings.length - 1;
+
+  //     // Find the first ad position in this range
+  //     const firstAdPos = Math.max(
+  //       Math.ceil((startGlobalPos + 1) / group.frequency) * group.frequency - 1,
+  //       startGlobalPos
+  //     );
+
+  //     // Iterate through all ad positions in this range
+  //     for (let globalPos = firstAdPos; globalPos <= endGlobalPos; globalPos += group.frequency) {
+  //       // Calculate which ad to show (consistent across pagination)
+  //       const adIndex = Math.floor(globalPos / group.frequency) % group.ads.length;
+  //       const ad = group.ads[adIndex];
+
+  //       // Calculate local position within this batch
+  //       const localPos = globalPos - startGlobalPos;
+
+  //       // Only insert if the position is within our current batch
+  //       if (localPos >= 0 && localPos <= result.length) {
+  //         insertions.push({
+  //           index: localPos,
+  //           ad: {
+  //             ...ad,
+  //             __isAd: true,
+  //             group_id: group.group_id,
+  //             group_name: group.group_name,
+  //           },
+  //         });
+  //       }
+  //     }
+  //   });
+
+  //   // Insert ads from highest to lowest index to avoid shifting issues
+  //   insertions.sort((a, b) => b.index - a.index).forEach(({ index, ad }) => {
+  //     result.splice(index, 0, ad);
+  //   });
+
+  //   return result;
+  // }
 
   // injectAdsWithPagination(
   //   listings: any[],
