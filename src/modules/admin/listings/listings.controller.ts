@@ -7,6 +7,7 @@ import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { Role } from 'src/common/guard/role/role.enum';
 import { Roles } from 'src/common/guard/role/roles.decorator';
 import { ListingsQueryDto } from './dto/get-flagged-listing.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 
 @Controller('admin/listings')
@@ -124,6 +125,19 @@ export class ListingsController {
     }
   }
 
+  @Patch('flagged-listings/:id/reverse')
+  async reverseFlaggedListing(@Param('id') id: string) {
+    try {
+      return await this.listingsService.reverseUpdateReportStatus(id);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to reverse flagged listing',
+      };
+    }
+  }
+
+
   @Patch('usa-listings/:id/approved')
   async approveUsaListing(@Param('id') id: string) {
     try {
@@ -159,6 +173,24 @@ export class ListingsController {
       }
     }
   }
+
+
+  @Patch('usa-listings/:id/reverse')
+  async reverseUsaListing(@Param('id') id: string) {
+    try {
+      return await this.listingsService.reverseUpdateUsaListingStatus(id);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to delete USA listing',
+      }
+    }
+  }
+
+
+
+  
+
 
 
 

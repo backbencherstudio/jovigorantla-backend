@@ -113,7 +113,7 @@ export class ListingsService {
         take: limit + 1,
         cursor: cursor ? { id: String(cursor) } : undefined,
         orderBy: {
-          created_at: 'desc',
+          updated_at: 'desc',
         },
         include: {
           listing: {
@@ -313,26 +313,26 @@ export class ListingsService {
         this.prisma.report.update({
           where: { id: reportId },
           data: {
-            status: newStatus,
+            status: newStatus,  
             updated_at: new Date(),
           },
         })
       );
 
-      // 2. Update other pending reports for same listing
-      updateTasks.push(
-        this.prisma.report.updateMany({
-          where: {
-            listing_id: report.listing.id,
-            status: 'PENDING',
-            NOT: { id: reportId },
-          },
-          data: {
-            status: newStatus,
-            updated_at: new Date(),
-          },
-        })
-      );
+      // // 2. Update other pending reports for same listing
+      // updateTasks.push(
+      //   this.prisma.report.updateMany({
+      //     where: {
+      //       listing_id: report.listing.id,
+      //       status: 'PENDING',
+      //       NOT: { id: reportId },
+      //     },
+      //     data: {
+      //       status: newStatus,
+      //       updated_at: new Date(),
+      //     },
+      //   })
+      // );
 
       // 3. Update listing (normal or USA) depending on report type
       const listingUpdatePayload: any = { updated_at: new Date() };
@@ -374,6 +374,7 @@ export class ListingsService {
       console.error('Error in updateReportStatus:', error);
       return {
         success: false,
+        report_id: reportId,
         message: 'Failed to update report status',
       };
     }
@@ -416,6 +417,7 @@ export class ListingsService {
           where: { id: listingId },
           data: {
             usa_listing_status: newStatus,
+            status: newStatus,
             updated_at: new Date(),
           },
         })
@@ -651,6 +653,179 @@ export class ListingsService {
       }
     }
   }
+
+
+  async reverseUpdateReportStatus(reportId: string) {
+    try {
+      // 1. Find the report with necessary relations
+      const report = await this.prisma.report.findUnique({
+        where: { id: reportId },
+        include: {
+          listing: {
+            select: {
+              id: true,
+              user_id: true,
+              status: true,
+              usa_listing_status: true,
+            },
+          },
+        },
+      });
+  
+      if (!report) {
+        return {
+          success: false,
+          message: 'Report not found',
+        };
+      }
+  
+      const updateTasks: Promise<any>[] = [];
+  
+      // 2. Restore the specified report to PENDING
+      updateTasks.push(
+        this.prisma.report.update({
+          where: { id: reportId },
+          data: {
+            status: 'PENDING',
+            updated_at: new Date(),
+          },
+        })
+      );
+  
+      // // 3. Restore other reports for the same listing to PENDING
+      // updateTasks.push(
+      //   this.prisma.report.updateMany({
+      //     where: {
+      //       listing_id: report.listing.id,
+      //       status: report.status, // Match reports with the same status as the original
+      //       NOT: { id: reportId },
+      //     },
+      //     data: {
+      //       status: 'PENDING',
+      //       updated_at: new Date(),
+      //     },
+      //   })
+      // );
+  
+      // 4. Restore the listing's status
+      const listingUpdatePayload: any = { updated_at: new Date() };
+  
+      if (report.report_type === 'POST_TO_USA') {
+        listingUpdatePayload.usa_listing_status = 'APPROVED';
+      } else {
+        listingUpdatePayload.status = 'APPROVED';
+      }
+  
+      updateTasks.push(
+        this.prisma.listing.update({
+          where: { id: report.listing.id },
+          data: listingUpdatePayload,
+        })
+      );
+  
+      // 5. Restore the user's status if it was blocked
+      if (report.status === 'BLOCKED') {
+        updateTasks.push(
+          this.prisma.user.update({
+            where: { id: report.listing.user_id },
+            data: {
+              status: 1, // Restore to active
+              updated_at: new Date(),
+            },
+          })
+        );
+      }
+  
+      // Execute all updates in parallel
+      await Promise.all(updateTasks);
+  
+      return {
+        success: true,
+        message: 'Report status reversal completed successfully.',
+      };
+    } catch (error) {
+      console.error('Error in reverseUpdateReportStatus:', error);
+      return {
+        success: false,
+        message: 'Failed to reverse report status',
+      };
+    }
+  }
+
+
+  async reverseUpdateUsaListingStatus(listingId: string) {
+    try {
+      // 1. Fetch listing with user ID and status
+      const listing = await this.prisma.listing.findUnique({
+        where: { id: listingId },
+        select: {
+          id: true,
+          user_id: true,
+          post_to_usa: true,
+          usa_listing_status: true,
+          status: true,
+        },
+      });
+  
+      if (!listing) {
+        return {
+          success: false,
+          message: 'Listing not found',
+        };
+      }
+  
+      if (!listing.post_to_usa) {
+        return {
+          success: false,
+          message: 'This is not a USA listing',
+        };
+      }
+  
+      const updateTasks: Promise<any>[] = [];
+      
+  
+      // 2. Restore usa_listing_status to PENDING
+      updateTasks.push(
+        this.prisma.listing.update({
+          where: { id: listingId },
+          data: {
+            usa_listing_status: 'PENDING',
+            status: 'APPROVED',
+            updated_at: new Date(),
+          },
+        })
+      );
+  
+      // 3. If the listing was BLOCKED, restore user status
+      if (listing.usa_listing_status === 'BLOCKED') {
+        updateTasks.push(
+          this.prisma.user.update({
+            where: { id: listing.user_id },
+            data: {
+              status: 1, // Restore to active
+              updated_at: new Date(),
+            },
+          })
+        );
+      }
+  
+      // Execute all updates in parallel
+      await Promise.all(updateTasks);
+  
+      return {
+        success: true,
+        message: 'USA listing status reversal completed successfully.',
+      };
+    } catch (error) {
+      console.error('Error in reverseUpdateUsaListingStatus:', error);
+      return {
+        success: false,
+        message: 'Failed to reverse USA listing status',
+      };
+    }
+  }
+  
+  
 
 
   // remove(id: number) {
