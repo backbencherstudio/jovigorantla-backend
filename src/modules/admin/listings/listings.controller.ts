@@ -128,7 +128,7 @@ export class ListingsController {
   @Patch('flagged-listings/:id/reverse')
   async reverseFlaggedListing(@Param('id') id: string) {
     try {
-      return await this.listingsService.reverseReportStatusUpdate(id);
+      return await this.listingsService.reverseUpdateReportStatus(id);
     } catch (error) {
       return {
         success: false,
@@ -173,6 +173,21 @@ export class ListingsController {
       }
     }
   }
+
+
+  @Patch('usa-listings/:id/reverse')
+  async reverseUsaListing(@Param('id') id: string) {
+    try {
+      return await this.listingsService.reverseUpdateUsaListingStatus(id);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to delete USA listing',
+      }
+    }
+  }
+
+
 
   
 

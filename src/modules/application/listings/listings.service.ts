@@ -206,396 +206,458 @@ export class ListingsService {
     }
   }
 
-  async findNearbyListings(
-    lat: number,
-    lng: number,
-    radius: number,
-    limit = 10,
-    numberOfShownListings = 0,
-    listing_cutoff_time?: string,
-    category?: string,
-    sub_category?: string,
-    search?: string,
-    is_usa?: boolean,
-    userSession?: any,
-  ) {
-    try {
-      const radiusInMeters = radius * 1609.34;
-      const now = new Date();
-      const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
-      const cutoffISO = cutoff.toISOString();
-      const proximityWeight = .5;
-      const freshnessWeight = .5;
+  //   async findNearbyListings(
+  //     lat: number,
+  //     lng: number,
+  //     radius: number,
+  //     limit = 10,
+  //     numberOfShownListings = 0,
+  //     listing_cutoff_time?: string,
+  //     category?: string,
+  //     sub_category?: string,
+  //     search?: string,
+  //     is_usa?: boolean,
+  //     userSession?: any,
+  //   ) {
+  //     try {
+  //       const radiusInMeters = radius * 1609.34;
+  //       const now = new Date();
+  //       const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+  //       const cutoffISO = cutoff.toISOString();
+  //       const proximityWeight = .5;
+  //       const freshnessWeight = .5;
 
-      // find listings with post_to_usa = true and status = 'APPROVED'
-      // const test = await this.prisma.$queryRawUnsafe(`
-      //   SELECT 
-      //     l.id,
-      //     l.title,
-      //     l.description,
-      //     l.category,
-      //     l.sub_category,
-      //     l.status,
-      //     l.usa_listing_status,
-      //     l.post_to_usa,
-      //     l.created_at,
-      //     l.updated_at,
-      //     u.id AS user_id,
-      //     u.name AS user_name,
-      //     u.avatar AS user_avatar
-      //   FROM listings l
-      //   JOIN users u ON u.id = l.user_id
-      //   JOIN "_ListingCities" lc ON lc."B" = l.id
-      //       JOIN cities c ON c.id = lc."A"
-      //   WHERE ST_DWithin(
-      //           c.location::geography,
-      //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
-      //           ${radiusInMeters}
-      //       )
-      //     AND l.usa_listing_status = 'APPROVED'
-      //     AND l.created_at <= '${cutoffISO}'::timestamp;
-      // `);
-
-
-      // console.log("Test => ", test)
-      // Start building the WHERE conditions
-      // let whereConditions = `
-      //       WHERE ST_DWithin(
-      //           c.location::geography,
-      //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
-      //           ${radiusInMeters}
-      //       )
-      //       AND l.created_at <= '${cutoffISO}'::timestamp
-      //   `;
-
-      // // Add filters conditionally
-      // if (category) {
-      //   whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
-      // }
-      // if (sub_category) {
-      //   whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
-      // }
-
-      // if (search) {
-      //   whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
-      // }
-
-      // // console.log("Is usa => ", is_usa)
-
-      // if (is_usa === true) {
-      //   whereConditions += ` AND l.post_to_usa = true`;
-      //   whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
-      // } else {
-      //   whereConditions += ` AND l.status = 'APPROVED'`;
-      // }
+  //       // find listings with post_to_usa = true and status = 'APPROVED'
+  //       // const test = await this.prisma.$queryRawUnsafe(`
+  //       //   SELECT 
+  //       //     l.id,
+  //       //     l.title,
+  //       //     l.description,
+  //       //     l.category,
+  //       //     l.sub_category,
+  //       //     l.status,
+  //       //     l.usa_listing_status,
+  //       //     l.post_to_usa,
+  //       //     l.created_at,
+  //       //     l.updated_at,
+  //       //     u.id AS user_id,
+  //       //     u.name AS user_name,
+  //       //     u.avatar AS user_avatar
+  //       //   FROM listings l
+  //       //   JOIN users u ON u.id = l.user_id
+  //       //   JOIN "_ListingCities" lc ON lc."B" = l.id
+  //       //       JOIN cities c ON c.id = lc."A"
+  //       //   WHERE ST_DWithin(
+  //       //           c.location::geography,
+  //       //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //       //           ${radiusInMeters}
+  //       //       )
+  //       //     AND l.usa_listing_status = 'APPROVED'
+  //       //     AND l.created_at <= '${cutoffISO}'::timestamp;
+  //       // `);
 
 
-      // Start building the WHERE conditions
-      let whereConditions = ` WHERE l.created_at <= '${cutoffISO}'::timestamp`;
+  //       // console.log("Test => ", test)
+  //       // Start building the WHERE conditions
+  //       // let whereConditions = `
+  //       //       WHERE ST_DWithin(
+  //       //           c.location::geography,
+  //       //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //       //           ${radiusInMeters}
+  //       //       )
+  //       //       AND l.created_at <= '${cutoffISO}'::timestamp
+  //       //   `;
 
-      // If is_usa is true, bypass the proximity check and apply the USA-specific filters
-      if (is_usa === true) {
-        whereConditions += ` AND l.post_to_usa = true`;
-        whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
-      } else {
-        whereConditions += `
-        AND ST_DWithin(
-          c.location::geography,
-          ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
-          ${radiusInMeters}
-        )`;
-      }
+  //       // // Add filters conditionally
+  //       // if (category) {
+  //       //   whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
+  //       // }
+  //       // if (sub_category) {
+  //       //   whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
+  //       // }
 
-      // Add category, sub_category, and search filters conditionally
-      if (category) {
-        whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
-      }
-      if (sub_category) {
-        whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
-      }
-      if (search) {
-        whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
-      }
+  //       // if (search) {
+  //       //   whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
+  //       // }
 
+  //       // // console.log("Is usa => ", is_usa)
 
-      // Build the complete query
-      const query = `
-            SELECT 
-                l.id,
-                l.created_at,
-                l.slug,
-                l.title,
-                l.description,
-                l.image,
-                l.category,
-                l.sub_category,
-                l.status,
-                l.usa_listing_status,
-                l.post_to_usa,
-                l.address,
-                l.created_at,
-                l.updated_at,
-                u.id AS user_id,
-                u.name AS user_name,
-                u.avatar AS user_avatar,
-                ST_Distance(
-                    c.location::geography,
-                    ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
-                ) / 1609.34 AS distance
-            FROM listings l
-            JOIN "_ListingCities" lc ON lc."B" = l.id
-            JOIN cities c ON c.id = lc."A"
-            JOIN users u ON u.id = l.user_id
-            ${whereConditions}
-        `;
-
-      // Execute the query
-      const rawListings: any = await this.prisma.$queryRawUnsafe(query);
-
-      // Rest of your processing logic remains the same...
-      if (!rawListings.length) {
-        return {
-          success: true,
-          message: 'No listings found within the specified radius',
-          data: {
-            listings: [],
-            numberOfShownListings: 0,
-            hasMore: false,
-            listing_cutoff_time: cutoff.toISOString(),
-          }
-        };
-      }
-
-      // Group listings by ID, keeping only the one with the shortest distance
-      const listingMap = new Map<string, any>();
-
-      for (const row of rawListings) {
-        const existing = listingMap.get(row.id);
-        if (!existing || row.distance < existing.distance) {
-          listingMap.set(row.id, row);
-        }
-      }
-
-      const uniqueListings = Array.from(listingMap.values());
-
-      // Score listings (proximity + freshness)
-      const scoredListings = uniqueListings.map(listing => {
-        const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
-        const proximityScore = (1 / (listing.distance + 1)) * 100;
-        const freshnessScore = Math.max(0, 100 - hoursOld * 2);
-        const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
-
-        return {
-          ...listing,
-          _score: finalScore,
-        };
-      });
-
-      const sorted = scoredListings.sort((a, b) => b._score - a._score);
-      const limitedListings = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
-
-      const groupsWithAds = await this.getActiveAdGroupsWithGeoMatchedAds(category || 'HOME', lat, lng);
-
-      // 👉 inject ads AFTER slicing `limit` listings
-      const listingsWithAds = this.injectAds(limitedListings, groupsWithAds, numberOfShownListings, userSession);
-
-      // then return
-      return {
-        success: true,
-        message: 'Listings fetched successfully',
-        data: {
-          listings: listingsWithAds.map((item) => {
-            if (item.__isAd) {
-              return {
-                type: 'ad',
-                id: item.id,
-                name: item.name,
-                target_url: item.target_url,
-                image_url: SojebStorage.url(appConfig().storageUrl.ads + item.image_url),
-                views: item.views || 0,
-                clicks: item.clicks || 0,
-                group_id: item.group_id,
-                group_name: item.group_name,
-              };
-            } else {
-              return {
-                type: 'listing',
-                id: item.id,
-                title: item.title,
-                slug: item.slug,
-                image: item.image,
-                category: item.category,
-                sub_category: item.sub_category,
-                description: item.description,
-                status: item.status,
-                usa_listing_status: item.usa_listing_status,
-                post_to_usa: item.post_to_usa,
-                address: item.address,
-                created_at: item.created_at,
-                updated_at: item.updated_at,
-                user: {
-                  id: item.user_id,
-                  name: item.user_name,
-                  avatar: item.user_avatar,
-                }
-              };
-            }
-          }),
-          numberOfShownListings: numberOfShownListings + limit,
-          hasMore: numberOfShownListings + limit < sorted.length,
-          listing_cutoff_time: cutoff.toISOString(),
-          totalCount: sorted.length,
-          totalItems: listingsWithAds.length, // Total items after ads injection
-        }
-      };
+  //       // if (is_usa === true) {
+  //       //   whereConditions += ` AND l.post_to_usa = true`;
+  //       //   whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
+  //       // } else {
+  //       //   whereConditions += ` AND l.status = 'APPROVED'`;
+  //       // }
 
 
-      // // Sort by score and paginate
-      // const sorted = scoredListings.sort((a, b) => b._score - a._score);
-      // // const paginated = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+  //       // Start building the WHERE conditions
+  //       let whereConditions = ` WHERE l.created_at <= '${cutoffISO}'::timestamp`;
+
+  //       // If is_usa is true, bypass the proximity check and apply the USA-specific filters
+  //       if (is_usa === true) {
+  //         whereConditions += ` AND l.post_to_usa = true`;
+  //         whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
+  //       } else {
+  //         whereConditions += `
+  //         AND ST_DWithin(
+  //           c.location::geography,
+  //           ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+  //           ${radiusInMeters}
+  //         )`;
+  //       }
+
+  //       // Add category, sub_category, and search filters conditionally
+  //       if (category) {
+  //         whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
+  //       }
+  //       if (sub_category) {
+  //         whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
+  //       }
+  //       if (search) {
+  //         whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
+  //       }
 
 
-      // const groupsWithAds = await this.getActiveAdGroupsWithGeoMatchedAds(category || 'HOME', lat, lng);
-      // const paginatedWithAds = this.injectAdsWithPagination(sorted, groupsWithAds, numberOfShownListings, limit);
-      // // console.log("Ads fetched:", groupsWithAds);
+  //       // Build the complete query
+  //       const query = `
+  //             SELECT 
+  //                 l.id,
+  //                 l.created_at,
+  //                 l.slug,
+  //                 l.title,
+  //                 l.description,
+  //                 l.image,
+  //                 l.category,
+  //                 l.sub_category,
+  //                 l.status,
+  //                 l.usa_listing_status,
+  //                 l.post_to_usa,
+  //                 l.address,
+  //                 l.created_at,
+  //                 l.updated_at,
+  //                 u.id AS user_id,
+  //                 u.name AS user_name,
+  //                 u.avatar AS user_avatar,
+  //                 ST_Distance(
+  //                     c.location::geography,
+  //                     ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+  //                 ) / 1609.34 AS distance
+  //             FROM listings l
+  //             JOIN "_ListingCities" lc ON lc."B" = l.id
+  //             JOIN cities c ON c.id = lc."A"
+  //             JOIN users u ON u.id = l.user_id
+  //             ${whereConditions}
+  //         `;
+
+  //       // Execute the query
+  //       const rawListings: any = await this.prisma.$queryRawUnsafe(query);
+
+  //       // Rest of your processing logic remains the same...
+  //       if (!rawListings.length) {
+  //         return {
+  //           success: true,
+  //           message: 'No listings found within the specified radius',
+  //           data: {
+  //             listings: [],
+  //             numberOfShownListings: 0,
+  //             hasMore: false,
+  //             listing_cutoff_time: cutoff.toISOString(),
+  //           }
+  //         };
+  //       }
+
+  //       // Group listings by ID, keeping only the one with the shortest distance
+  //       const listingMap = new Map<string, any>();
+
+  //       for (const row of rawListings) {
+  //         const existing = listingMap.get(row.id);
+  //         if (!existing || row.distance < existing.distance) {
+  //           listingMap.set(row.id, row);
+  //         }
+  //       }
+
+  //       const uniqueListings = Array.from(listingMap.values());
+
+  //       // Score listings (proximity + freshness)
+  //       const scoredListings = uniqueListings.map(listing => {
+  //         const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
+  //         const proximityScore = (1 / (listing.distance + 1)) * 100;
+  //         const freshnessScore = Math.max(0, 100 - hoursOld * 2);
+  //         const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
+
+  //         return {
+  //           ...listing,
+  //           _score: finalScore,
+  //         };
+  //       });
+
+  //       const sorted = scoredListings.sort((a, b) => b._score - a._score);
+  //       const limitedListings = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+
+  //       const groupsWithAds = await this.getActiveAdGroupsWithGeoMatchedAds(category || 'HOME', lat, lng);
+
+  //       // 👉 inject ads AFTER slicing `limit` listings
+  //       const listingsWithAds = this.injectAds(limitedListings, groupsWithAds, numberOfShownListings, userSession);
+
+  //       // then return
+  //       return {
+  //         success: true,
+  //         message: 'Listings fetched successfully',
+  //         data: {
+  //           listings: listingsWithAds.map((item) => {
+  //             if (item.__isAd) {
+  //               return {
+  //                 type: 'ad',
+  //                 id: item.id,
+  //                 name: item.name,
+  //                 target_url: item.target_url,
+  //                 image_url: SojebStorage.url(appConfig().storageUrl.ads + item.image_url),
+  //                 views: item.views || 0,
+  //                 clicks: item.clicks || 0,
+  //                 group_id: item.group_id,
+  //                 group_name: item.group_name,
+  //               };
+  //             } else {
+  //               return {
+  //                 type: 'listing',
+  //                 id: item.id,
+  //                 title: item.title,
+  //                 slug: item.slug,
+  //                 image: item.image,
+  //                 category: item.category,
+  //                 sub_category: item.sub_category,
+  //                 description: item.description,
+  //                 status: item.status,
+  //                 usa_listing_status: item.usa_listing_status,
+  //                 post_to_usa: item.post_to_usa,
+  //                 address: item.address,
+  //                 created_at: item.created_at,
+  //                 updated_at: item.updated_at,
+  //                 user: {
+  //                   id: item.user_id,
+  //                   name: item.user_name,
+  //                   avatar: item.user_avatar,
+  //                 }
+  //               };
+  //             }
+  //           }),
+  //           numberOfShownListings: numberOfShownListings + limit,
+  //           hasMore: numberOfShownListings + limit < sorted.length,
+  //           listing_cutoff_time: cutoff.toISOString(),
+  //           totalCount: sorted.length,
+  //           totalItems: listingsWithAds.length, // Total items after ads injection
+  //         }
+  //       };
 
 
-      // return {
-      //   success: true,
-      //   message: 'Listings fetched successfully',
-      //   data: {
-      //     listings: paginatedWithAds.map((item) => {
-      //       if (item.__isAd) {
-      //         return {
-      //           type: 'ad',
-      //           id: item.id,
-      //           name: item.name,
-      //           target_url: item.target_url,
-      //           image_url: SojebStorage.url(appConfig().storageUrl.ads + item.image_url),
-      //           views: item.views || 0,
-      //           clicks: item.clicks || 0,
-      //           group_id: item.group_id,
-      //           group_name: item.group_name,
-      //         };
-      //       } else {
-      //         return {
-      //           type: 'listing',
-      //           id: item.id,
-      //           title: item.title,
-      //           slug: item.slug,
-      //           image: item.image,
-      //           category: item.category,
-      //           sub_category: item.sub_category,
-      //           description: item.description,
-      //           status: item.status,
-      //           post_to_usa: item.post_to_usa,
-      //           user: {
-      //             id: item.user_id,
-      //             name: item.user_name,
-      //             avatar: item.user_avatar,
-      //           }
-      //         };
-      //       }
-      //     }),
-      //     numberOfShownListings: numberOfShownListings + paginatedWithAds.length,
-      //     hasMore: numberOfShownListings + paginatedWithAds.length < (sorted.length + groupsWithAds.length * 5), // approx
-      //     listing_cutoff_time: cutoff.toISOString(),
-      //     totalCount: sorted.length,
-      //   }
-      // };
+  //       // // Sort by score and paginate
+  //       // const sorted = scoredListings.sort((a, b) => b._score - a._score);
+  //       // // const paginated = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
 
 
+  //       // const groupsWithAds = await this.getActiveAdGroupsWithGeoMatchedAds(category || 'HOME', lat, lng);
+  //       // const paginatedWithAds = this.injectAdsWithPagination(sorted, groupsWithAds, numberOfShownListings, limit);
+  //       // // console.log("Ads fetched:", groupsWithAds);
 
-      // groupsWithAds.forEach(group => {
-      //     group.ads.forEach(ad => {
-      //         console.log("Ad details:", ad)
-      //     });
-      // }
-      // );
-      // Add ads to the paginated listings
 
-      // Return structured result
-      // return {
-      //     success: true,
-      //     message: 'Listings fetched successfully',
-      //     data: {
-      //         listings: paginated.map(({ _score, user_id, user_name, user_avatar, ...rest }) => ({
-      //             ...rest,
-      //             user: {
-      //                 id: user_id,
-      //                 name: user_name,
-      //                 avatar: user_avatar,
-      //             }
-      //         })),
-      //         numberOfShownListings: numberOfShownListings + paginated.length,
-      //         hasMore: numberOfShownListings + paginated.length < sorted.length,
-      //         listing_cutoff_time: cutoff.toISOString(),
-      //         totalCount: uniqueListings.length,
-      //     }
-      // };
-    } catch (error) {
-      console.error('Error in findNearbyListings:', error);
-      return {
-        success: false,
-        message: 'Failed to fetch listings',
-      };
-    }
-  }
+  //       // return {
+  //       //   success: true,
+  //       //   message: 'Listings fetched successfully',
+  //       //   data: {
+  //       //     listings: paginatedWithAds.map((item) => {
+  //       //       if (item.__isAd) {
+  //       //         return {
+  //       //           type: 'ad',
+  //       //           id: item.id,
+  //       //           name: item.name,
+  //       //           target_url: item.target_url,
+  //       //           image_url: SojebStorage.url(appConfig().storageUrl.ads + item.image_url),
+  //       //           views: item.views || 0,
+  //       //           clicks: item.clicks || 0,
+  //       //           group_id: item.group_id,
+  //       //           group_name: item.group_name,
+  //       //         };
+  //       //       } else {
+  //       //         return {
+  //       //           type: 'listing',
+  //       //           id: item.id,
+  //       //           title: item.title,
+  //       //           slug: item.slug,
+  //       //           image: item.image,
+  //       //           category: item.category,
+  //       //           sub_category: item.sub_category,
+  //       //           description: item.description,
+  //       //           status: item.status,
+  //       //           post_to_usa: item.post_to_usa,
+  //       //           user: {
+  //       //             id: item.user_id,
+  //       //             name: item.user_name,
+  //       //             avatar: item.user_avatar,
+  //       //           }
+  //       //         };
+  //       //       }
+  //       //     }),
+  //       //     numberOfShownListings: numberOfShownListings + paginatedWithAds.length,
+  //       //     hasMore: numberOfShownListings + paginatedWithAds.length < (sorted.length + groupsWithAds.length * 5), // approx
+  //       //     listing_cutoff_time: cutoff.toISOString(),
+  //       //     totalCount: sorted.length,
+  //       //   }
+  //       // };
 
 
 
-  injectAds(
-    listings: any[],
-    adGroups: any[],
-    numberOfShownListings: number = 0,
-    userSession: any // Assuming session is passed in from the controller
-  ): any[] {
-    const result = [...listings];
-    const insertions: { index: number; ad: any }[] = [];
+  //       // groupsWithAds.forEach(group => {
+  //       //     group.ads.forEach(ad => {
+  //       //         console.log("Ad details:", ad)
+  //       //     });
+  //       // }
+  //       // );
+  //       // Add ads to the paginated listings
 
-    adGroups.forEach((group) => {
-      if (group.ads.length === 0 || group.frequency <= 0) return;
+  //       // Return structured result
+  //       // return {
+  //       //     success: true,
+  //       //     message: 'Listings fetched successfully',
+  //       //     data: {
+  //       //         listings: paginated.map(({ _score, user_id, user_name, user_avatar, ...rest }) => ({
+  //       //             ...rest,
+  //       //             user: {
+  //       //                 id: user_id,
+  //       //                 name: user_name,
+  //       //                 avatar: user_avatar,
+  //       //             }
+  //       //         })),
+  //       //         numberOfShownListings: numberOfShownListings + paginated.length,
+  //       //         hasMore: numberOfShownListings + paginated.length < sorted.length,
+  //       //         listing_cutoff_time: cutoff.toISOString(),
+  //       //         totalCount: uniqueListings.length,
+  //       //     }
+  //       // };
+  //     } catch (error) {
+  //       console.error('Error in findNearbyListings:', error);
+  //       return {
+  //         success: false,
+  //         message: 'Failed to fetch listings',
+  //       };
+  //     }
+  //   }
 
-      // Retrieve the last shown ad index for the user from the session
-      const lastAdIndex = userSession?.lastAdIndex?.[group.group_id] || 0;
 
-      // Calculate the position where the next ad will be injected
-      const sinceLastAd = numberOfShownListings % group.frequency;
-      const listingsUntilNextAd = group.frequency - sinceLastAd;
+  //   injectAds(
+  //     listings: any[],
+  //     adGroups: any[],
+  //     numberOfShownListings: number = 0,
+  //     userSession: any // Assuming session is passed in from the controller
+  // ): any[] {
 
-      let nextAdPos = listingsUntilNextAd; // Position for the first ad insertion
-      let adIndex = (lastAdIndex + Math.floor(numberOfShownListings / group.frequency)) % group.ads.length;
+  //     console.log("User session => ", userSession);
+  //     console.log("Ad groups => ", adGroups);
+  //     const result = [...listings];
+  //     const insertions: { index: number; ad: any }[] = [];
 
-      while (nextAdPos <= result.length) {
-        const ad = group.ads[adIndex % group.ads.length];
+  //     // Iterate over each ad group
+  //     adGroups.forEach((group) => {
+  //         if (group.ads.length === 0 || group.frequency <= 0) return;
 
-        insertions.push({
-          index: nextAdPos,
-          ad: { ...ad, __isAd: true, group_id: group.group_id, group_name: group.group_name },
-        });
+  //         // Retrieve the last shown ad index for the user from the session, specific to this group
+  //         let lastAdIndex = userSession?.lastAdIndex?.[group.group_id] || 0;
 
-        adIndex++;
-        nextAdPos += group.frequency;
-      }
+  //         // Calculate the position where the next ad will be injected
+  //         const sinceLastAd = numberOfShownListings % group.frequency;
+  //         const listingsUntilNextAd = group.frequency - sinceLastAd;
 
-      // Check if userSession.lastAdIndex exists, if not, initialize it
-      if (!userSession.lastAdIndex) {
-        userSession.lastAdIndex = {};
-      }
+  //         let nextAdPos = listingsUntilNextAd; // Position for the first ad insertion
+  //         let adIndex = (lastAdIndex + Math.floor(numberOfShownListings / group.frequency)) % group.ads.length;
 
-      // Now assign the ad index to the appropriate group
-      userSession.lastAdIndex[group.group_id] = adIndex % group.ads.length;
-      // Update the last shown ad index for the user in the session
-      // userSession?.lastAdIndex?.[group.group_id] = adIndex % group.ads.length;
-    });
+  //         // Loop to insert ads for this group based on the frequency
+  //         while (nextAdPos <= result.length) {
+  //             const ad = group.ads[adIndex % group.ads.length]; // Ensure we cycle through ads
 
-    // Insert the ads in the correct order
-    insertions.sort((a, b) => b.index - a.index).forEach(({ index, ad }) => {
-      result.splice(index, 0, ad);
-    });
+  //             insertions.push({
+  //                 index: nextAdPos,
+  //                 ad: { ...ad, __isAd: true, group_id: group.group_id, group_name: group.group_name },
+  //             });
 
-    return result;
-  }
+  //             adIndex++;
+  //             nextAdPos += group.frequency; // Move to the next position for the ad
+  //         }
+
+  //         // Check if userSession.lastAdIndex exists, if not, initialize it
+  //         if (!userSession.lastAdIndex) {
+  //             userSession.lastAdIndex = {};
+  //         }
+
+  //         // Now, update the last ad index correctly for this group, so it persists for the next page
+  //         userSession.lastAdIndex[group.group_id] = adIndex % group.ads.length;
+
+  //     });
+
+  //     // Insert the ads in the correct order
+  //     insertions.sort((a, b) => b.index - a.index).forEach(({ index, ad }) => {
+  //         result.splice(index, 0, ad); // Insert ads in the sorted order
+  //     });
+
+  //     return result;
+  // }
+
+
+
+
+  // injectAds(
+  //   listings: any[],
+  //   adGroups: any[],
+  //   numberOfShownListings: number = 0,
+  //   userSession: any // Assuming session is passed in from the controller
+  // ): any[] {
+
+  //   console.log("User session => ", userSession)
+  //   console.log("Ad groups => ", adGroups)
+  //   const result = [...listings];
+  //   const insertions: { index: number; ad: any }[] = [];
+
+  //   adGroups.forEach((group) => {
+  //     if (group.ads.length === 0 || group.frequency <= 0) return;
+
+  //     // Retrieve the last shown ad index for the user from the session
+  //     const lastAdIndex = userSession?.lastAdIndex?.[group.group_id] || 0;
+
+  //     // Calculate the position where the next ad will be injected
+  //     const sinceLastAd = numberOfShownListings % group.frequency;
+  //     const listingsUntilNextAd = group.frequency - sinceLastAd;
+
+  //     let nextAdPos = listingsUntilNextAd; // Position for the first ad insertion
+  //     let adIndex = (lastAdIndex + Math.floor(numberOfShownListings / group.frequency)) % group.ads.length;
+
+  //     while (nextAdPos <= result.length) {
+  //       const ad = group.ads[adIndex % group.ads.length];
+
+  //       insertions.push({
+  //         index: nextAdPos,
+  //         ad: { ...ad, __isAd: true, group_id: group.group_id, group_name: group.group_name },
+  //       });
+
+  //       adIndex++;
+  //       nextAdPos += group.frequency;
+  //     }
+
+  //     // Check if userSession.lastAdIndex exists, if not, initialize it
+  //     if (!userSession.lastAdIndex) {
+  //       userSession.lastAdIndex = {};
+  //     }
+
+  //     // Now assign the ad index to the appropriate group
+  //     userSession.lastAdIndex[group.group_id] = adIndex % group.ads.length;
+  //     // Update the last shown ad index for the user in the session
+  //     // userSession?.lastAdIndex?.[group.group_id] = adIndex % group.ads.length;
+  //   });
+
+  //   // Insert the ads in the correct order
+  //   insertions.sort((a, b) => b.index - a.index).forEach(({ index, ad }) => {
+  //     result.splice(index, 0, ad);
+  //   });
+
+  //   return result;
+  // }
 
   // injectAds(
   //   listings: any[],
@@ -902,134 +964,142 @@ export class ListingsService {
   // }
 
 
-  async getActiveAdGroupsWithGeoMatchedAds(
-    category: string,
-    lat: number,
-    lng: number
-  ): Promise<AdGroupWithAds[]> {
-    const now = new Date();
+  // async getActiveAdGroupsWithGeoMatchedAds(
+  //   category: string,
+  //   lat: number,
+  //   lng: number
+  // ): Promise<AdGroupWithAds[]> {
+  //   const now = new Date();
 
-    // console.log("Category:", category)
+  //   // console.log("Category:", category)
 
-    const pages = ["HOME", "RIDES", "MARKETPLACE", "JOBS", "ACCOMMODATIONS"]
-    if (!pages.includes(category)) {
-      return [];
-    }
+  //   const pages = ["HOME", "RIDES", "MARKETPLACE", "JOBS", "ACCOMMODATIONS"]
+  //   if (!pages.includes(category)) {
+  //     return [];
+  //   }
 
 
-    const adGroups = await this.prisma.adGroup.findMany({
-      where: {
-        display_pages: {
-          has: category as any,
-        },
-        active: true,
-        OR: [
-          {
-            start_date: {
-              lte: now,
-            },
-            end_date: {
-              gte: now,
-            },
-          },
-          {
-            start_date: null,
-            end_date: null,
-          },
-        ],
-      },
-      include: {
-        ads: {
-          where: {
-            active: true,
-            OR: [
-              {
-                adCities: {
-                  some: {
-                    city: {
-                      latitude: lat,
-                      longitude: lng,
-                    },
-                  },
-                },
-              },
-              {
-                adCities: {
-                  none: {},
-                },
-              },
-            ],
-          },
-          include: {
-            adCities: {
-              include: {
-                city: true,
-              },
-            },
-          },
-        },
-      },
-    });
+  //   const adGroups = await this.prisma.adGroup.findMany({
+  //     where: {
+  //       display_pages: {
+  //         has: category as any,
+  //       },
+  //       active: true,
+  //       OR: [
+  //         {
+  //           start_date: {
+  //             lte: now,
+  //           },
+  //           end_date: {
+  //             gte: now,
+  //           },
+  //         },
+  //         {
+  //           start_date: null,
+  //           end_date: null,
+  //         },
+  //       ],
+  //     },
+  //     include: {
+  //       ads: {
+  //         where: {
+  //           active: true,
+  //           OR: [
+  //             {
+  //               adCities: {
+  //                 some: {
+  //                   city: {
+  //                     latitude: lat,
+  //                     longitude: lng,
+  //                   },
+  //                 },
+  //               },
+  //             },
+  //             {
+  //               adCities: {
+  //                 none: {},
+  //               },
+  //             },
+  //           ],
+  //         },
+  //         include: {
+  //           adCities: {
+  //             include: {
+  //               city: true,
+  //             },
+  //           },
+  //         },
+  //         orderBy: {
+  //           created_at: "asc",
+  //         }
+  //       },
+  //     },
+  //   });
 
-    // const result: AdGroupWithAds[] = adGroups.map((group) => ({
-    //   group_id: group.id,
-    //   group_name: group.name,
-    //   display_pages: group.display_pages,
-    //   frequency: group.frequency,
-    //   ads: group.ads.map((ad) => ({
-    //     id: ad.id,
-    //     name: ad.name,
-    //     target_url: ad.target_url,
-    //     image_url: ad.image,
-    //     views: ad.views || 0,
-    //     clicks: ad.clicks || 0,
-    //   })),
-    // }));
+  //   // const result: AdGroupWithAds[] = adGroups.map((group) => ({
+  //   //   group_id: group.id,
+  //   //   group_name: group.name,
+  //   //   display_pages: group.display_pages,
+  //   //   frequency: group.frequency,
+  //   //   ads: group.ads.map((ad) => ({
+  //   //     id: ad.id,
+  //   //     name: ad.name,
+  //   //     target_url: ad.target_url,
+  //   //     image_url: ad.image,
+  //   //     views: ad.views || 0,
+  //   //     clicks: ad.clicks || 0,
+  //   //   })),
+  //   // }));
 
-    // Increment the views for each ad
-    const result: AdGroupWithAds[] = await Promise.all(
-      adGroups.map(async (group) => {
-        const updatedAds = await Promise.all(
-          group.ads.map(async (ad) => {
-            // Increment the views by 1
-            const updatedAd = await this.prisma.ad.update({
-              where: { id: ad.id },
-              data: {
-                views: {
-                  increment: 1,
-                },
-              },
-            });
+  //   // Increment the views for each ad
+  //   const result: AdGroupWithAds[] = await Promise.all(
+  //     adGroups.map(async (group) => {
+  //       const updatedAds = await Promise.all(
+  //         group.ads.map(async (ad) => {
+  //           // Increment the views by 1
+  //           const updatedAd = await this.prisma.ad.update({
+  //             where: { id: ad.id },
+  //             data: {
+  //               views: {
+  //                 increment: 1,
+  //               },
+  //             },
+  //           });
 
-            return {
-              id: updatedAd.id,
-              name: updatedAd.name,
-              target_url: updatedAd.target_url,
-              image_url: updatedAd.image,
-              views: updatedAd.views,
-              clicks: updatedAd.clicks || 0,
-            };
-          })
-        );
+  //           return {
+  //             id: updatedAd.id,
+  //             name: updatedAd.name,
+  //             target_url: updatedAd.target_url,
+  //             image_url: updatedAd.image,
+  //             views: updatedAd.views,
+  //             clicks: updatedAd.clicks || 0,
+  //           };
+  //         })
+  //       );
 
-        return {
-          group_id: group.id,
-          group_name: group.name,
-          display_pages: group.display_pages,
-          frequency: group.frequency,
-          ads: updatedAds,
-        };
-      })
-    );
+  //       return {
+  //         group_id: group.id,
+  //         group_name: group.name,
+  //         display_pages: group.display_pages,
+  //         frequency: group.frequency,
+  //         ads: updatedAds,
+  //       };
+  //     })
+  //   );
 
-    return result.filter((group) => group.ads.length > 0);
-  }
+  //   return result.filter((group) => group.ads.length > 0);
+  // }
 
 
   async findAll(userId: string) {
     try {
       const listings = await this.prisma.listing.findMany({
-        where: { user_id: userId },
+        where: {
+          user_id: userId,
+          NOT: {
+            status: 'DELETED'
+          }
+        },
         include: {
           user: {
             select: {
@@ -1372,5 +1442,461 @@ export class ListingsService {
       };
     }
   }
+
+
+
+  async findNearbyListings(
+    lat: number,
+    lng: number,
+    radius: number,
+    limit = 10,
+    numberOfShownListings = 0,
+    listing_cutoff_time?: string,
+    category?: string,
+    sub_category?: string,
+    search?: string,
+    is_usa?: boolean,
+    userSession?: any,
+  ) {
+    try {
+      const radiusInMeters = radius * 1609.34;
+      const now = new Date();
+      const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
+      const cutoffISO = cutoff.toISOString();
+      const proximityWeight = .5;
+      const freshnessWeight = .5;
+
+      // Initialize session ad tracking if not exists
+      if (!userSession?.adTracking) {
+        userSession.adTracking = {};
+      }
+
+      // Start building the WHERE conditions
+      let whereConditions = ` WHERE l.created_at <= '${cutoffISO}'::timestamp`;
+
+      // If is_usa is true, bypass the proximity check and apply the USA-specific filters
+      if (is_usa === true) {
+        whereConditions += ` AND l.post_to_usa = true`;
+        whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
+      } else {
+        whereConditions += `
+        AND l.status = 'APPROVED'
+        AND ST_DWithin(
+          c.location::geography,
+          ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography,
+          ${radiusInMeters}
+        )`;
+      }
+
+      // Add category, sub_category, and search filters conditionally
+      if (category) {
+        whereConditions += ` AND l.category = '${category.replace(/'/g, "''")}'`;
+      }
+      if (sub_category) {
+        whereConditions += ` AND l.sub_category = '${sub_category.replace(/'/g, "''")}'`;
+      }
+      if (search) {
+        whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
+      }
+
+      // Build the complete query
+      const query = `
+            SELECT 
+                l.id,
+                l.created_at,
+                l.slug,
+                l.title,
+                l.description,
+                l.image,
+                l.category,
+                l.sub_category,
+                l.status,
+                l.usa_listing_status,
+                l.post_to_usa,
+                l.address,
+                l.created_at,
+                l.updated_at,
+                u.id AS user_id,
+                u.name AS user_name,
+                u.avatar AS user_avatar,
+                ST_Distance(
+                    c.location::geography,
+                    ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)::geography
+                ) / 1609.34 AS distance
+            FROM listings l
+            JOIN "_ListingCities" lc ON lc."B" = l.id
+            JOIN cities c ON c.id = lc."A"
+            JOIN users u ON u.id = l.user_id
+            ${whereConditions}
+        `;
+
+      // Execute the query
+      const rawListings: any = await this.prisma.$queryRawUnsafe(query);
+
+      if (!rawListings.length) {
+        return {
+          success: true,
+          message: 'No listings found within the specified radius',
+          data: {
+            listings: [],
+            numberOfShownListings: 0,
+            hasMore: false,
+            listing_cutoff_time: cutoff.toISOString(),
+          }
+        };
+      }
+
+      // Group listings by ID, keeping only the one with the shortest distance
+      const listingMap = new Map<string, any>();
+
+      for (const row of rawListings) {
+        const existing = listingMap.get(row.id);
+        if (!existing || row.distance < existing.distance) {
+          listingMap.set(row.id, row);
+        }
+      }
+
+      const uniqueListings = Array.from(listingMap.values());
+
+      // Score listings (proximity + freshness)
+      const scoredListings = uniqueListings.map(listing => {
+        const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
+        const proximityScore = (1 / (listing.distance + 1)) * 100;
+        const freshnessScore = Math.max(0, 100 - hoursOld * 2);
+        const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
+
+        return {
+          ...listing,
+          _score: finalScore,
+        };
+      });
+
+      const sorted = scoredListings.sort((a, b) => b._score - a._score);
+      const limitedListings = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+
+      const groupsWithAds = await this.getActiveAdGroupsWithGeoMatchedAds(category || 'HOME', lat, lng);
+
+      // Inject ads with proper pagination handling
+      const listingsWithAds = this.injectAdsWithPagination(
+        limitedListings,
+        groupsWithAds,
+        numberOfShownListings,
+        userSession
+      );
+
+      return {
+        success: true,
+        message: 'Listings fetched successfully',
+        data: {
+          listings: listingsWithAds.map((item) => {
+            if (item.__isAd) {
+              return {
+                type: 'ad',
+                id: item.id,
+                name: item.name,
+                target_url: item.target_url,
+                image_url: SojebStorage.url(appConfig().storageUrl.ads + item.image_url),
+                views: item.views || 0,
+                clicks: item.clicks || 0,
+                group_id: item.group_id,
+                group_name: item.group_name,
+              };
+            } else {
+              return {
+                type: 'listing',
+                id: item.id,
+                title: item.title,
+                slug: item.slug,
+                image: item.image,
+                category: item.category,
+                sub_category: item.sub_category,
+                description: item.description,
+                status: item.status,
+                usa_listing_status: item.usa_listing_status,
+                post_to_usa: item.post_to_usa,
+                address: item.address,
+                created_at: item.created_at,
+                updated_at: item.updated_at,
+                user: {
+                  id: item.user_id,
+                  name: item.user_name,
+                  avatar: item.user_avatar,
+                }
+              };
+            }
+          }),
+          numberOfShownListings: numberOfShownListings + limit,
+          hasMore: numberOfShownListings + limit < sorted.length,
+          listing_cutoff_time: cutoff.toISOString(),
+          totalCount: sorted.length,
+          totalItems: listingsWithAds.length,
+        }
+      };
+    } catch (error) {
+      console.error('Error in findNearbyListings:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch listings',
+      };
+    }
+  }
+
+  /**
+   * Improved ad injection with proper pagination handling
+   */
+  injectAdsWithPagination(
+    listings: any[],
+    adGroups: any[],
+    numberOfShownListings: number,
+    userSession: any
+  ): any[] {
+    if (!adGroups.length || !listings.length) {
+      return listings;
+    }
+
+    // Initialize session ad tracking if not exists
+    if (!userSession?.adTracking || numberOfShownListings === 0) {
+      userSession.adTracking = {};
+    }
+
+
+    const result = [...listings];
+    const insertions: { index: number; ad: any }[] = [];
+
+    adGroups.forEach((group) => {
+      if (group.ads.length === 0 || group.frequency <= 0) return;
+
+      // Initialize tracking for this group if not exists
+      if (!userSession.adTracking[group.group_id]) {
+        userSession.adTracking[group.group_id] = {
+          currentAdIndex: 0,
+          totalListingsShown: 0, // Track only listings, not ads
+        };
+      }
+
+      const groupTracking = userSession.adTracking[group.group_id];
+
+      // Calculate total listings shown up to this point (excluding ads)
+      const totalListingsBeforeThisPage = numberOfShownListings;
+
+      // Find positions where ads should be inserted for this group
+      const adPositions = this.calculateAdPositions(
+        group.frequency,
+        totalListingsBeforeThisPage,
+        listings.length,
+        groupTracking.totalListingsShown
+      );
+
+      adPositions.forEach((position) => {
+        // Get the next ad for this group with proper wrapping
+        const ad = group.ads[groupTracking.currentAdIndex];
+
+        insertions.push({
+          index: position,
+          ad: {
+            ...ad,
+            __isAd: true,
+            group_id: group.group_id,
+            group_name: group.group_name,
+          },
+        });
+
+        // Update the ad index with proper wrapping
+        groupTracking.currentAdIndex = (groupTracking.currentAdIndex + 1) % group.ads.length;
+      });
+
+      // Update total listings shown for this group (only count listings, not ads)
+      groupTracking.totalListingsShown = totalListingsBeforeThisPage + listings.length;
+    });
+
+    // Sort insertions by index in descending order to maintain correct positions
+    insertions.sort((a, b) => b.index - a.index);
+
+    // Insert ads into the result
+    insertions.forEach(({ index, ad }) => {
+      if (index >= 0 && index <= result.length) {
+        result.splice(index, 0, ad);
+      }
+    });
+
+    return result;
+  }
+
+  /**
+   * Calculate the total number of ads injected before the current page
+   */
+  private getTotalAdsInjectedBefore(
+    numberOfShownListings: number,
+    adGroups: any[],
+    userSession: any
+  ): number {
+    let totalAds = 0;
+
+    adGroups.forEach((group) => {
+      if (group.frequency <= 0) return;
+
+      const groupTracking = userSession.adTracking?.[group.group_id];
+      if (!groupTracking) return;
+
+      // Calculate how many ads from this group were injected before this page
+      const adsFromThisGroup = Math.floor(groupTracking.totalItemsShown / group.frequency);
+      totalAds += adsFromThisGroup;
+    });
+
+    return totalAds;
+  }
+
+  /**
+   * Calculate positions where ads should be inserted for a specific group
+   */
+  private calculateAdPositions(
+    frequency: number,
+    totalListingsBeforeThisPage: number,
+    currentPageSize: number,
+    groupTotalItemsShown: number
+  ): number[] {
+    const positions: number[] = [];
+
+    // Calculate how many listings we've shown so far (excluding ads)
+    const listingsShownSoFar = totalListingsBeforeThisPage;
+
+    // Find the next multiple of frequency that's greater than listingsShownSoFar
+    let nextAdAfterListing = Math.floor(listingsShownSoFar / frequency + 1) * frequency;
+
+    // Convert to relative position on current page
+    let relativePosition = nextAdAfterListing - listingsShownSoFar;
+
+    // Add positions for ads that should appear on this page
+    while (relativePosition <= currentPageSize) {
+      // Position should be after the listing, so we add the position
+      positions.push(relativePosition);
+      relativePosition += frequency;
+    }
+
+    return positions;
+  }
+
+  /**
+   * Original inject method for backward compatibility (now calls the improved version)
+   */
+  injectAds(
+    listings: any[],
+    adGroups: any[],
+    numberOfShownListings: number = 0,
+    userSession: any
+  ): any[] {
+    return this.injectAdsWithPagination(listings, adGroups, numberOfShownListings, userSession);
+  }
+
+  async getActiveAdGroupsWithGeoMatchedAds(
+    category: string,
+    lat: number,
+    lng: number
+  ): Promise<AdGroupWithAds[]> {
+    const now = new Date();
+
+    const pages = ["HOME", "RIDES", "MARKETPLACE", "JOBS", "ACCOMMODATIONS"];
+    if (!pages.includes(category)) {
+      return [];
+    }
+
+    const adGroups = await this.prisma.adGroup.findMany({
+      where: {
+        display_pages: {
+          has: category as any,
+        },
+        active: true,
+        OR: [
+          {
+            start_date: {
+              lte: now,
+            },
+            end_date: {
+              gte: now,
+            },
+          },
+          {
+            start_date: null,
+            end_date: null,
+          },
+        ],
+      },
+      include: {
+        ads: {
+          where: {
+            active: true,
+            OR: [
+              {
+                adCities: {
+                  some: {
+                    city: {
+                      latitude: lat,
+                      longitude: lng,
+                    },
+                  },
+                },
+              },
+              {
+                adCities: {
+                  none: {},
+                },
+              },
+            ],
+          },
+          include: {
+            adCities: {
+              include: {
+                city: true,
+              },
+            },
+          },
+          orderBy: {
+            created_at: "asc",
+          }
+        },
+      },
+    });
+
+    // Increment the views for each ad
+    const result: AdGroupWithAds[] = await Promise.all(
+      adGroups.map(async (group) => {
+        const updatedAds = await Promise.all(
+          group.ads.map(async (ad) => {
+            // Increment the views by 1
+            const updatedAd = await this.prisma.ad.update({
+              where: { id: ad.id },
+              data: {
+                views: {
+                  increment: 1,
+                },
+              },
+            });
+
+            return {
+              id: updatedAd.id,
+              name: updatedAd.name,
+              target_url: updatedAd.target_url,
+              image_url: updatedAd.image,
+              views: updatedAd.views,
+              clicks: updatedAd.clicks || 0,
+            };
+          })
+        );
+
+        return {
+          group_id: group.id,
+          group_name: group.name,
+          display_pages: group.display_pages,
+          frequency: group.frequency,
+          ads: updatedAds,
+        };
+      })
+    );
+
+    return result.filter((group) => group.ads.length > 0);
+  }
+
+
+
 
 }
