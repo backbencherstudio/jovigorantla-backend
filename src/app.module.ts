@@ -22,6 +22,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { PaymentModule } from './modules/payment/payment.module';
 
 import { ThrottlerModule } from '@nestjs/throttler';
+import { TimezoneMiddleware } from './common/middleware/timezone.middleware';
 
 @Module({
   imports: [
@@ -98,6 +99,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
+    consumer.apply(LoggerMiddleware, TimezoneMiddleware).forRoutes('*');
   }
 }

@@ -32,7 +32,7 @@ export class MessageController {
     @Body() createMessageDto: CreateMessageDto,
   ) {
     const user_id = req.user.userId;
-    const message = await this.messageService.create(user_id, createMessageDto);
+    const message = await this.messageService.create(user_id, createMessageDto, req.timezone);
     if (message.success) {
       const messageData = {
         message: {
@@ -58,7 +58,7 @@ export class MessageController {
             data: messageData,
           });
 
-          console.log('emit message', user_id, createMessageDto.receiver_id, messageData)
+          // console.log('emit message', user_id, createMessageDto.receiver_id, messageData)
 
           
 
@@ -91,6 +91,7 @@ export class MessageController {
         conversation_id,
         limit,
         cursor,
+        timezone: req.timezone,
       });
       return messages;
     } catch (error) {

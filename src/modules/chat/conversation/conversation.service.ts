@@ -7,6 +7,7 @@ import appConfig from '../../../config/app.config';
 import { SojebStorage } from '../../../common/lib/Disk/SojebStorage';
 import { DateHelper } from '../../../common/helper/date.helper';
 import { MessageGateway } from '../message/message.gateway';
+import * as moment from 'moment-timezone';
 
 @Injectable()
 export class ConversationService {
@@ -26,7 +27,7 @@ export class ConversationService {
     };
   }
 
-  async create(createConversationDto: CreateConversationDto) {
+  async create(createConversationDto: CreateConversationDto, userTimezone: string) {
     try {
       const data: any = {};
 
@@ -100,14 +101,22 @@ export class ConversationService {
         // },
       });
 
+
+
       if (conversation) {
+        const createdAtInUserTimezone = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss');
+        const updatedAtInUserTimezone = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss');
         return {
           success: true,
           message: 'Conversation already exists',
-          data: conversation,
+          data: {
+            ...conversation,
+            created_at: createdAtInUserTimezone,
+            updated_at: updatedAtInUserTimezone,
+          },
         };
       }
-      
+
 
       conversation = await this.prisma.conversation.create({
         select: {
@@ -153,6 +162,11 @@ export class ConversationService {
         },
       });
 
+
+      // Convert created_at and updated_at to user's timezone
+      conversation.created_at = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
+      conversation.updated_at = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
+
       // add image url
       if (conversation.creator.avatar) {
         conversation.creator['avatar_url'] = SojebStorage.url(
@@ -168,12 +182,12 @@ export class ConversationService {
 
       // trigger socket event
       this.messageGateway.server.to(data.creator_id).emit('conversation', {
-      // this.messageGateway.server.emit('conversation', {
+        // this.messageGateway.server.emit('conversation', {
         from: data.creator_id,
         data: conversation,
       });
       this.messageGateway.server.to(data.participant_id).emit('conversation', {
-      // this.messageGateway.server.emit('conversation', {
+        // this.messageGateway.server.emit('conversation', {
         from: data.participant_id,
         data: conversation,
       });
@@ -269,7 +283,7 @@ export class ConversationService {
   //   }
   // }
 
-  async findAll(user_id: string) {
+  async findAll(user_id: string, userTimezone: string) {
     try {
       // const cs = await this.prisma.conversation.findMany({
       //   where: {
@@ -414,6 +428,26 @@ export class ConversationService {
 
       // Add avatar URLs and format response
       const data = conversations.map((conversation) => {
+        // Convert created_at and updated_at to user's timezone
+        const createdAtInUserTimezone = moment(conversation.created_at)
+          .tz(userTimezone)
+          .format('YYYY-MM-DD HH:mm:ss');
+        const updatedAtInUserTimezone = moment(conversation.updated_at)
+          .tz(userTimezone)
+          .format('YYYY-MM-DD HH:mm:ss');
+
+        // Convert message created_at to user's timezone
+        const messages = conversation.messages.map((message) => {
+          const messageCreatedAtInUserTimezone = moment(message.created_at)
+            .tz(userTimezone)
+            .format('YYYY-MM-DD HH:mm:ss');
+
+          return {
+            ...message,
+            created_at: messageCreatedAtInUserTimezone, // Adding formatted message created_at
+          };
+        });
+
         const creator = {
           ...conversation.creator,
           avatar_url: conversation.creator?.avatar
@@ -430,8 +464,11 @@ export class ConversationService {
 
         return {
           ...conversation,
+          created_at: createdAtInUserTimezone, // Adding the formatted created_at
+          updated_at: updatedAtInUserTimezone, // Adding the formatted updated_at
           creator,
           participant,
+          messages,
           unread_count: conversation._count.messages,
         };
       });
@@ -441,7 +478,7 @@ export class ConversationService {
         data,
       };
     } catch (error) {
-      console.log(error);
+      // console.log(error);
       return {
         success: false,
         message: error.message,
@@ -449,7 +486,7 @@ export class ConversationService {
     }
   }
 
-  async findOne(id: string, user_id: string) {
+  async findOne(id: string, user_id: string, userTimezone: string) {
     try {
       const conversation = await this.prisma.conversation.findFirst({
         // where: {
@@ -512,6 +549,9 @@ export class ConversationService {
           appConfig().storageUrl.avatar + conversation.creator.avatar,
         );
       }
+
+       conversation.created_at = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
+       conversation.updated_at = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
 
       return {
         success: true,
@@ -635,107 +675,107 @@ export class ConversationService {
 
 
   async blockConversation(id: string, userId: string) {
-   try{
-    const conversation = await this.prisma.conversation.findFirst({
-      where: {
-        id,
-        OR: [{ creator_id: userId }, { participant_id: userId }],
-      },
-    });
-  
-    if (!conversation) return { success: false, message: 'Conversation not found' };
-  
-    const isCreator = conversation.creator_id === userId;
-  
-    await this.prisma.conversation.update({
-      where: { id },
-      data: isCreator
-        ? { blocked_by_creator: true }
-        : { blocked_by_participant: true },
-    });
+    try {
+      const conversation = await this.prisma.conversation.findFirst({
+        where: {
+          id,
+          OR: [{ creator_id: userId }, { participant_id: userId }],
+        },
+      });
 
-    // await this.messageGateway.server.to(
-    //   isCreator ? conversation.participant_id : conversation.creator_id
-    // ).emit('conversation-blocked', {
-    //   conversation_id: id,
-    //   by: userId,
-    // });
+      if (!conversation) return { success: false, message: 'Conversation not found' };
 
-    await this.messageGateway.server.to(
-      conversation.creator_id
-    ).emit('conversation-blocked', {
-      conversation_id: id,
-      by: userId,
-    });
+      const isCreator = conversation.creator_id === userId;
 
-    await this.messageGateway.server.to(
-      conversation.participant_id
-    ).emit('conversation-blocked', {
-      conversation_id: id,
-      by: userId,
-    });
-  
-    return { success: true, message: 'User blocked successfully' };
-   }catch(error){
-    return {
-      success: false,
-      message:"Failed to block user",
+      await this.prisma.conversation.update({
+        where: { id },
+        data: isCreator
+          ? { blocked_by_creator: true }
+          : { blocked_by_participant: true },
+      });
+
+      // await this.messageGateway.server.to(
+      //   isCreator ? conversation.participant_id : conversation.creator_id
+      // ).emit('conversation-blocked', {
+      //   conversation_id: id,
+      //   by: userId,
+      // });
+
+      await this.messageGateway.server.to(
+        conversation.creator_id
+      ).emit('conversation-blocked', {
+        conversation_id: id,
+        by: userId,
+      });
+
+      await this.messageGateway.server.to(
+        conversation.participant_id
+      ).emit('conversation-blocked', {
+        conversation_id: id,
+        by: userId,
+      });
+
+      return { success: true, message: 'User blocked successfully' };
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to block user",
+      }
     }
-   }
   }
 
   async unblockConversation(id: string, userId: string) {
-   try {
-    const conversation = await this.prisma.conversation.findFirst({
-      where: {
-        id,
-        OR: [{ creator_id: userId }, { participant_id: userId }],
-      },
-    });
-  
-    if (!conversation) return { success: false, message: 'Conversation not found' };
-  
-    const isCreator = conversation.creator_id === userId;
-  
-    await this.prisma.conversation.update({
-      where: { id },
-      data: isCreator
-        ? { blocked_by_creator: false }
-        : { blocked_by_participant: false },
-    });
+    try {
+      const conversation = await this.prisma.conversation.findFirst({
+        where: {
+          id,
+          OR: [{ creator_id: userId }, { participant_id: userId }],
+        },
+      });
 
-    // await this.messageGateway.server.to(
-    //   isCreator ? conversation.participant_id : conversation.creator_id
-    // ).emit('conversation-unblocked', {
-    //   conversation_id: id,
-    //   by: userId,
-    // });
+      if (!conversation) return { success: false, message: 'Conversation not found' };
 
-    // trigger socket event for creator and participant
-    await this.messageGateway.server.to(
-      conversation.creator_id
-    ).emit('conversation-unblocked', {
-      conversation_id: id,
-      by: userId,
-    });
+      const isCreator = conversation.creator_id === userId;
 
-    await this.messageGateway.server.to(
-      conversation.participant_id
-    ).emit('conversation-unblocked', {
-      conversation_id: id,
-      by: userId,
-    });
+      await this.prisma.conversation.update({
+        where: { id },
+        data: isCreator
+          ? { blocked_by_creator: false }
+          : { blocked_by_participant: false },
+      });
+
+      // await this.messageGateway.server.to(
+      //   isCreator ? conversation.participant_id : conversation.creator_id
+      // ).emit('conversation-unblocked', {
+      //   conversation_id: id,
+      //   by: userId,
+      // });
+
+      // trigger socket event for creator and participant
+      await this.messageGateway.server.to(
+        conversation.creator_id
+      ).emit('conversation-unblocked', {
+        conversation_id: id,
+        by: userId,
+      });
+
+      await this.messageGateway.server.to(
+        conversation.participant_id
+      ).emit('conversation-unblocked', {
+        conversation_id: id,
+        by: userId,
+      });
 
 
-    
-  
-    return { success: true, message: 'User unblocked successfully' };
-   } catch (error) {
-    return {
-      success: false,
-      message:"Failed to unblock user",
+
+
+      return { success: true, message: 'User unblocked successfully' };
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to unblock user",
+      }
     }
-   }
   }
 
   async softDeleteConversation(id: string, userId: string) {
@@ -746,23 +786,23 @@ export class ConversationService {
           OR: [{ creator_id: userId }, { participant_id: userId }],
         },
       });
-    
+
       if (!conversation) return { success: false, message: 'Conversation not found' };
-    
+
       const isCreator = conversation.creator_id === userId;
-    
+
       await this.prisma.conversation.update({
         where: { id },
         data: isCreator
           ? { deleted_by_creator: new Date() }
           : { deleted_by_participant: new Date() },
       });
-  
+
       await this.messageGateway.server.to(userId).emit('conversation-soft-deleted', {
         conversation_id: id,
         by: userId,
       });
-      
+
 
       // await this.messageGateway.server.to(
       //   conversation.creator_id
@@ -770,14 +810,14 @@ export class ConversationService {
       //   conversation_id: id,
       //   by: userId,
       // });
-  
+
       // await this.messageGateway.server.to(
       //   conversation.participant_id
       // ).emit('conversation-soft-deleted', {
       //   conversation_id: id,
       //   by: userId,
       // });
-    
+
       return {
         success: true,
         message: 'Conversation deleted for current user',
@@ -785,14 +825,14 @@ export class ConversationService {
     } catch (error) {
       return {
         success: false,
-        message:"Failed to delete conversation",
+        message: "Failed to delete conversation",
       }
     }
   }
-  
 
-  
 
-  
+
+
+
 
 }

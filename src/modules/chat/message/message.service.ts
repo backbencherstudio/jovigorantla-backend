@@ -9,6 +9,7 @@ import { DateHelper } from '../../../common/helper/date.helper';
 import { MessageGateway } from './message.gateway';
 import { UserRepository } from '../../../common/repository/user/user.repository';
 import { Role } from 'src/common/guard/role/role.enum';
+import * as moment from 'moment-timezone';
 
 @Injectable()
 export class MessageService {
@@ -101,22 +102,22 @@ export class MessageService {
   // }
 
 
-  async create(user_id: string, createMessageDto: CreateMessageDto) {
+  async create(user_id: string, createMessageDto: CreateMessageDto, timezone: string) {
     try {
       const data: any = {};
-  
+
       if (createMessageDto.conversation_id) {
         data.conversation_id = createMessageDto.conversation_id;
       }
-  
+
       if (createMessageDto.receiver_id) {
         data.receiver_id = createMessageDto.receiver_id;
       }
-  
+
       if (createMessageDto.message) {
         data.message = createMessageDto.message;
       }
-  
+
       // 1. Find conversation
       const conversation = await this.prisma.conversation.findFirst({
         where: {
@@ -127,38 +128,38 @@ export class MessageService {
           ],
         },
       });
-  
+
       if (!conversation) {
         return {
           success: false,
           message: 'Conversation not found',
         };
       }
-  
+
       // 2. Check if receiver exists
       const receiver = await this.prisma.user.findFirst({
         where: {
           id: data.receiver_id,
         },
       });
-  
+
       if (!receiver) {
         return {
           success: false,
           message: 'Receiver not found',
         };
       }
-  
+
       // 3. Restore conversation for receiver if previously deleted
       const isReceiverCreator = conversation.creator_id === data.receiver_id;
       const deletedField = isReceiverCreator ? 'deleted_by_creator' : 'deleted_by_participant';
-  
+
       if (conversation[deletedField]) {
         await this.prisma.conversation.update({
           where: { id: data.conversation_id },
           data: { [deletedField]: null },
         });
-  
+
         // Emit restored conversation back to receiver (user who deleted it)
         const updatedConversation = await this.prisma.conversation.findUnique({
           where: { id: data.conversation_id },
@@ -173,7 +174,24 @@ export class MessageService {
             },
           },
         });
-  
+
+        const createdAtInUserTimezone = moment(conversation.created_at)
+          .tz(timezone) // Use the timezone parameter passed to the method
+          .format('YYYY-MM-DD HH:mm:ss');
+        const updatedAtInUserTimezone = moment(conversation.updated_at)
+          .tz(timezone)
+          .format('YYYY-MM-DD HH:mm:ss');
+
+        updatedConversation.created_at = createdAtInUserTimezone as any;
+        updatedConversation.updated_at = updatedAtInUserTimezone as any;
+
+
+        updatedConversation.messages.forEach((msg) => {
+          msg.created_at = moment(message.created_at)
+            .tz(timezone) // Use the timezone parameter passed to the method
+            .format('YYYY-MM-DD HH:mm:ss') as any;
+        });
+
         this.messageGateway.server
           .to(data.receiver_id)
           .emit('deleted-conversation', {
@@ -181,7 +199,7 @@ export class MessageService {
             data: updatedConversation,
           });
       }
-  
+
       // 4. Create the message
       const message = await this.prisma.message.create({
         data: {
@@ -190,13 +208,21 @@ export class MessageService {
           sender_id: user_id,
         },
       });
-  
+
+      // Convert message created_at to user's timezone
+      const messageCreatedAtInUserTimezone = moment(message.created_at)
+        .tz(timezone) // Use the timezone parameter passed to the method
+        .format('YYYY-MM-DD HH:mm:ss');
+
       // 5. Update conversation timestamp
       await this.prisma.conversation.update({
         where: { id: data.conversation_id },
         data: { updated_at: DateHelper.now() },
       });
-  
+
+
+
+
       // 6. Emit message in real time (optional)
       // this.messageGateway.server
       //   .to(data.receiver_id)
@@ -204,10 +230,13 @@ export class MessageService {
       //     from: user_id,
       //     data: { message },
       //   });
-  
+
       return {
         success: true,
-        data: message,
+        data: {
+          ...message,
+          created_at: messageCreatedAtInUserTimezone,
+        },
         message: 'Message sent successfully',
       };
     } catch (error) {
@@ -217,18 +246,20 @@ export class MessageService {
       };
     }
   }
-  
+
 
   async findAll({
     user_id,
     conversation_id,
     limit = 20,
     cursor,
+    timezone,
   }: {
     user_id: string;
     conversation_id: string;
     limit?: number;
     cursor?: string;
+    timezone: string;
   }) {
     try {
       const userDetails = await UserRepository.getUserDetails(user_id);
@@ -249,6 +280,14 @@ export class MessageService {
           ...where_condition,
         },
       });
+
+      conversation.created_at = moment(conversation.created_at)
+        .tz(timezone)
+        .format('YYYY-MM-DD HH:mm:ss') as any;
+
+      conversation.updated_at = moment(conversation.updated_at)
+        .tz(timezone)
+        .format('YYYY-MM-DD HH:mm:ss') as any;
 
       if (!conversation) {
         return {
@@ -318,6 +357,12 @@ export class MessageService {
             appConfig().storageUrl.attachment + message.attachment.file,
           );
         }
+
+        message.created_at = moment(message.created_at)
+         .tz(timezone)
+         .format('YYYY-MM-DD HH:mm:ss') as any;
+
+        
       }
 
       // add image url
