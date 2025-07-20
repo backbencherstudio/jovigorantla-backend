@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
 export class TimezoneMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     // Check if timezone is sent in the request headers or body
-    const timezone = req.headers['timezone'] || req.body.timezone;
+    const timezone = req.headers['timezone'] || req.body?.timezone;
     req['timezone'] = timezone;
     // console.log(`User's timezone: ${timezone}`);
 
