@@ -226,7 +226,7 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  async googleLogin(): Promise<any> {
+  googleLogin(){
     // return HttpStatus.OK;
   }
 

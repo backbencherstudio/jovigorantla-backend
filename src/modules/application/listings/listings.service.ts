@@ -1565,7 +1565,7 @@ export class ListingsService {
         const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
         const proximityScore = (1 / (listing.distance + 1)) * 100;
         const freshnessScore = Math.max(0, 100 - hoursOld * 2);
-        const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
+        const finalScore = (proximityScore * .01) + (freshnessScore * .99);
 
         return {
           ...listing,
