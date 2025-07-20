@@ -55,7 +55,7 @@ export class ConversationController {
   @Get()
   async findAll(@Req() req: Request) {
     try {
-      console.log(req.timezone)
+      // console.log(req.timezone)
       const conversations = await this.conversationService.findAll(req?.user?.userId, req.timezone);
       return conversations;
     } catch (error) {
