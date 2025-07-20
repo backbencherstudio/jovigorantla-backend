@@ -35,10 +35,11 @@ export class ConversationController {
 
   @ApiOperation({ summary: 'Create conversation' })
   @Post()
-  async create(@Body() createConversationDto: CreateConversationDto) {
+  async create(@Body() createConversationDto: CreateConversationDto, @Req() req: Request) {
     try {
       const conversation = await this.conversationService.create(
-        createConversationDto,
+        createConversationDto, 
+        req.timezone
       );
       return conversation;
     } catch (error) {
@@ -54,7 +55,8 @@ export class ConversationController {
   @Get()
   async findAll(@Req() req: Request) {
     try {
-      const conversations = await this.conversationService.findAll(req?.user?.userId);
+      console.log(req.timezone)
+      const conversations = await this.conversationService.findAll(req?.user?.userId, req.timezone);
       return conversations;
     } catch (error) {
       return {
@@ -128,7 +130,7 @@ export class ConversationController {
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: Request) {
     try {
-      const conversation = await this.conversationService.findOne(id, req?.user?.userId);
+      const conversation = await this.conversationService.findOne(id, req?.user?.userId, req.timezone);
       return conversation;
     } catch (error) {
       return {

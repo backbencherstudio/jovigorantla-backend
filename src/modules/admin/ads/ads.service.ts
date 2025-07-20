@@ -559,8 +559,8 @@ export class AdsService {
 
 
       const data: any = {};
-      if (updateAdDto.target_url) data.target_url = updateAdDto.target_url;
-      if (updateAdDto.name) data.name = updateAdDto.name;
+      data.target_url = updateAdDto.target_url;
+      data.name = updateAdDto.name;
       if (image) {
         const randomName = Array(32)
           .fill(null)
