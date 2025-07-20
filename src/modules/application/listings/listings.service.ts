@@ -9,6 +9,7 @@ import * as cuid from 'cuid';
 import { NearbyListingsQueryDto } from './dto/near-by-listing.dto';
 import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
 import appConfig from 'src/config/app.config';
+import { config } from 'process';
 
 
 
@@ -1463,8 +1464,9 @@ export class ListingsService {
       const now = new Date();
       const cutoff = listing_cutoff_time ? new Date(listing_cutoff_time) : now;
       const cutoffISO = cutoff.toISOString();
-      const proximityWeight = .5;
-      const freshnessWeight = .5;
+      const proximityWeight = Number(process.env.PROXIMITY_WEIGHT);
+      const freshnessWeight = Number(process.env.FRESHNESS_WEIGHT);
+
 
       // Initialize session ad tracking if not exists
       if (!userSession?.adTracking) {
