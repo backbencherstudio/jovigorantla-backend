@@ -53,7 +53,7 @@ export class CustomExceptionFilter implements ExceptionFilter {
       message = typeof res === 'string' ? res : (res as any)?.message || message;
     }
 
-    console.log(exception);
+    // console.log(exception);
     response.status(status).json({
       success: false,
       message,
