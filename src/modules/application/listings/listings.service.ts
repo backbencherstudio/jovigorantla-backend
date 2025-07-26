@@ -1445,6 +1445,33 @@ export class ListingsService {
   }
 
 
+  calculateDistanceInMiles(lat1, lon1, lat2, lon2) {
+    // Convert degrees to radians
+    const radianLat1 = lat1 * (Math.PI / 180);
+    const radianLon1 = lon1 * (Math.PI / 180);
+    const radianLat2 = lat2 * (Math.PI / 180);
+    const radianLon2 = lon2 * (Math.PI / 180);
+
+    // Haversine formula
+    const dLat = radianLat2 - radianLat1;
+    const dLon = radianLon2 - radianLon1;
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(radianLat1) * Math.cos(radianLat2) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    // Radius of the Earth in miles (3959)
+    const radius = 3959;
+
+    // Calculate the distance
+    const distance = radius * c;
+
+    return distance;
+}
+  
 
   async findNearbyListings(
     lat: number,
@@ -1466,6 +1493,8 @@ export class ListingsService {
       const cutoffISO = cutoff.toISOString();
       const proximityWeight = Number(process.env.PROXIMITY_WEIGHT);
       const freshnessWeight = Number(process.env.FRESHNESS_WEIGHT);
+      // const proximityWeight = 0.5
+      // const freshnessWeight = 0.5
 
 
       // Initialize session ad tracking if not exists
@@ -1518,6 +1547,8 @@ export class ListingsService {
                 l.address,
                 l.created_at,
                 l.updated_at,
+                l.latitude,
+                l.longitude,
                 u.id AS user_id,
                 u.name AS user_name,
                 u.avatar AS user_avatar,
@@ -1570,15 +1601,26 @@ export class ListingsService {
     
         // Improved proximity score - higher for closer distances
         // Using inverse square gives better differentiation for nearby items
-        const proximityScore = 100 / Math.pow(listing.distance + 1, 0.5);
+        // const proximityScore = 100 / Math.pow(listing.distance + 1, 0.5);
+        const proximityScore = 100 / Math.pow(this.calculateDistanceInMiles(lat, lng, listing.latitude, listing.longitude) + 1, 0.5);
+
+
+        // const proximityScore = 100 / (1 + listing.distance)
 
         // Hyperbolic decay (adjust k as needed)
         const k = 24; // Tune this!
         const freshnessScore = 100 / (1 + hoursOld / k);
         const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
+      
+        // console.log(listing.latitude, listing.longitude)
 
         // console.log(" ====================================")
-        // console.log("listing => ", listing.title, listing.distance, hoursOld, proximityScore, freshnessScore, finalScore)
+        // console.log("listing => ", listing.title, 
+        //   " distance: ",this.calculateDistanceInMiles(lat, lng, listing.latitude, listing.longitude), 
+        //   " hoursOld: ", hoursOld, 
+        //   " proximityScore: ", proximityScore, 
+        //   " freshnessScore: ",freshnessScore, 
+        //   " finalScore: ", finalScore)
         // console.log(" ====================================")
 
         return {
@@ -1589,6 +1631,7 @@ export class ListingsService {
 
       const sorted = scoredListings.sort((a, b) => b._score - a._score);
 
+      
       // for (const listing of sorted) {
       //   console.log("listing => ", listing.title, listing._score)
       // }
