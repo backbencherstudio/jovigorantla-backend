@@ -522,8 +522,8 @@ model Favorite {
   listing_id String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  listing    Listing  @relation(fields: [listing_id], references: [id])
-  user       User     @relation(fields: [user_id], references: [id])
+  listing    Listing  @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, listing_id])
   @@map("favorites")
