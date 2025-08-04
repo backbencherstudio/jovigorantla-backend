@@ -73,6 +73,7 @@ model User {
   user_payment_methods      UserPaymentMethod[]
   user_settings             UserSetting[]
   reports Report[]
+  deleted_messages          Message[]            @relation("deleted_by")
 
   @@map("users")
 }
@@ -218,9 +219,12 @@ model PaymentTransaction {
 
 model Message {
   id              String         @id @default(cuid())
-  created_at      DateTime       @default(now())
-  updated_at      DateTime       @default(now())
+  created_at      DateTime       @default(now())  @db.Timestamptz
+  updated_at      DateTime       @updatedAt       @db.Timestamptz
   deleted_at      DateTime?
+  deleted_by_id   String?
+  deleted_by      User?          @relation("deleted_by", fields: [deleted_by_id], references: [id], onDelete: SetNull)
+  deleted_for     String?        @default("self") // self, everyone
   status          MessageStatus? @default(PENDING)
   sender_id       String?
   receiver_id     String?
@@ -522,8 +526,8 @@ model Favorite {
   listing_id String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  listing    Listing  @relation(fields: [listing_id], references: [id])
-  user       User     @relation(fields: [user_id], references: [id])
+  listing    Listing  @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, listing_id])
   @@map("favorites")
