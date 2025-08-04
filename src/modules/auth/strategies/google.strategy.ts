@@ -10,7 +10,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientID: appConfig().auth.google.app_id,
       clientSecret: appConfig().auth.google.app_secret,
       callbackURL: appConfig().auth.google.callback,
-      scope: ['email', 'profile'],
+      scope: ['email', 'profile', 
+  //       'https://www.googleapis.com/auth/gmail.readonly',
+  // 'https://www.googleapis.com/auth/gmail.modify',
+],
     });
   }
 
@@ -21,6 +24,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ): Promise<any> {
     const { name, emails, photos } = profile;
+    // console.log('Google access token:', accessToken);
     const user = {
       email: emails[0].value,
       firstName: name.givenName,

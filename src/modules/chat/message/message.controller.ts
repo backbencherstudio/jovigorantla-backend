@@ -42,8 +42,10 @@ export class MessageController {
           from: message.data.sender_id,
           conversation_id: message.data.conversation_id,
           created_at: message.data.created_at,
+          receiver_id: createMessageDto.receiver_id,
         },
       };
+
       this.messageGateway.server
         .to(message.data.conversation_id)
         .emit('message', {
@@ -65,6 +67,7 @@ export class MessageController {
       return {
         success: message.success,
         message: message.message,
+        data: messageData.message
       };
     } else {
       return {

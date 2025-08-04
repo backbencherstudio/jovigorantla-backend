@@ -153,8 +153,10 @@ export class MessageService {
       // 3. Restore conversation for receiver if previously deleted
       const isReceiverCreator = conversation.creator_id === data.receiver_id;
       const deletedField = isReceiverCreator ? 'deleted_by_creator' : 'deleted_by_participant';
+      // console.log(deletedField)
 
       if (conversation[deletedField]) {
+        // console.log('deletedField', deletedField)
         await this.prisma.conversation.update({
           where: { id: data.conversation_id },
           data: { [deletedField]: null },
@@ -168,9 +170,9 @@ export class MessageService {
             participant: { select: { id: true, name: true, avatar: true } },
             listing: { select: { id: true, title: true } },
             messages: {
-              take: 1,
-              orderBy: { created_at: 'desc' },
-              select: { id: true, message: true, created_at: true },
+              // take: 1,
+              orderBy: { created_at: 'asc' },
+              // select: { id: true, message: true, created_at: true },
             },
           },
         });
@@ -187,10 +189,11 @@ export class MessageService {
 
 
         updatedConversation.messages.forEach((msg) => {
-          msg.created_at = moment(message.created_at)
+          msg.created_at = moment(msg.created_at)
             .tz(timezone) // Use the timezone parameter passed to the method
             .format('YYYY-MM-DD HH:mm:ss') as any;
         });
+        // console.log('updatedConversation', updatedConversation)
 
         this.messageGateway.server
           .to(data.receiver_id)
@@ -240,6 +243,7 @@ export class MessageService {
         message: 'Message sent successfully',
       };
     } catch (error) {
+      console.log(error)
       return {
         success: false,
         message: error.message,

@@ -72,14 +72,15 @@ export class ConversationService {
           },
           messages: {
             orderBy: {
-              created_at: 'desc',
+              created_at: 'asc',
             },
-            take: 1,
-            select: {
-              id: true,
-              message: true,
-              created_at: true,
-            },
+            // take: 1,
+            // select: {
+            //   id: true,
+            //   message: true,
+            //   created_at: true,
+              
+            // },
           },
         },
         where: {
@@ -103,9 +104,41 @@ export class ConversationService {
 
 
 
+
+
       if (conversation) {
+
         const createdAtInUserTimezone = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss');
         const updatedAtInUserTimezone = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss');
+        // Convert message created_at to user's timezone
+        if(conversation.messages.length > 0) {
+          for (const message of conversation.messages) {
+            message.created_at = moment(message.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
+          }
+        }
+
+        await this.prisma.conversation.update({
+          where: {
+            id: conversation.id,
+          },
+          data: {
+            updated_at: new Date(),
+            deleted_by_participant: null,
+            deleted_by_creator: null,
+          },
+        });
+
+
+
+        // await this.prisma.message.updateMany({
+        //   where: {
+        //     conversation_id: conversation.id,
+        //   },
+        //   data: {
+        //     is_read: true,
+        //   },
+        // });
+
         return {
           success: true,
           message: 'Conversation already exists',
@@ -147,14 +180,14 @@ export class ConversationService {
           },
           messages: {
             orderBy: {
-              created_at: 'desc',
+              created_at: 'asc',
             },
             take: 1,
-            select: {
-              id: true,
-              message: true,
-              created_at: true,
-            },
+            // select: {
+            //   id: true,
+            //   message: true,
+            //   created_at: true,
+            // },
           },
         },
         data: {
