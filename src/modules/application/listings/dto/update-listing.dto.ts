@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/swagger';
 import { CreateListingDto } from './create-listing.dto';
-import { IsArray, IsOptional } from 'class-validator';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class UpdateListingDto extends PartialType(CreateListingDto) {
@@ -13,6 +13,7 @@ export class UpdateListingDto extends PartialType(CreateListingDto) {
         address: string;
     }[];
 
-    
-
+    @IsOptional()
+    @IsString()
+    image_url?: string;
 }
