@@ -1236,6 +1236,10 @@ export class ListingsService {
         data.image = fileName
       }
 
+      if(!updateListingDto.image_url) data.image = null
+
+
+
       // Generate slug if title is provided
       if (updateListingDto.title) {
         const baseSlug = generateSlug(updateListingDto.title);

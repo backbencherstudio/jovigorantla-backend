@@ -132,4 +132,6 @@ export class CreateListingDto {
   @MinLength(1, { message: 'Cities array must have at least one city' })
   @Type(() => CityDto)
   cities: CityDto[];
+
+  
 }
