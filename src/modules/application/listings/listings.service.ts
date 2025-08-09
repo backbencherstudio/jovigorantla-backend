@@ -1240,16 +1240,16 @@ export class ListingsService {
 
 
       // Generate slug if title is provided
-      if (updateListingDto.title) {
-        const baseSlug = generateSlug(updateListingDto.title);
-        let slug = baseSlug;
-        let counter = 1;
+      // if (updateListingDto.title) {
+      //   const baseSlug = generateSlug(updateListingDto.title);
+      //   let slug = baseSlug;
+      //   let counter = 1;
 
-        while (await this.prisma.listing.findUnique({ where: { slug } })) {
-          slug = `${baseSlug}-${counter++}`;
-        }
-        data.slug = slug;
-      }
+      //   while (await this.prisma.listing.findUnique({ where: { slug } })) {
+      //     slug = `${baseSlug}-${counter++}`;
+      //   }
+      //   data.slug = slug;
+      // }
 
 
 
