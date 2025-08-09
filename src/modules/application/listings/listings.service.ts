@@ -1234,10 +1234,9 @@ export class ListingsService {
 
         await SojebStorage.put("listing/" + fileName, image.buffer);
         data.image = fileName
+      }else if(!updateListingDto.image_url) {
+        data.image = null
       }
-
-      if(!updateListingDto.image_url) data.image = null
-
 
 
       // Generate slug if title is provided
