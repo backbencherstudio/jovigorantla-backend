@@ -1512,6 +1512,7 @@ export class ListingsService {
       if (is_usa === true) {
         whereConditions += ` AND l.post_to_usa = true`;
         whereConditions += ` AND l.usa_listing_status = 'APPROVED'`;
+        whereConditions += ` ORDER BY l.updated_at DESC`
       } else {
         whereConditions += `
         AND l.status = 'APPROVED'
@@ -1532,6 +1533,8 @@ export class ListingsService {
       if (search) {
         whereConditions += ` AND (l.title ILIKE '%${search.replace(/'/g, "''")}%' OR l.description ILIKE '%${search.replace(/'/g, "''")}%')`;
       }
+
+     
 
       // Build the complete query
       const query = `
@@ -1589,56 +1592,73 @@ export class ListingsService {
         const existing = listingMap.get(row.id);
         if (!existing || row.distance < existing.distance) {
           listingMap.set(row.id, row);
+
         }
       }
 
-      const uniqueListings = Array.from(listingMap.values());
-
-      // Score listings (proximity + freshness)
-      const scoredListings = uniqueListings.map(listing => {
-        // const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
-        // const proximityScore = (1 / (listing.distance + 1)) * 100;
-        // const freshnessScore = Math.max(0, 100 - hoursOld * 2);
-
-        const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
-    
-        // Improved proximity score - higher for closer distances
-        // Using inverse square gives better differentiation for nearby items
-        // const proximityScore = 100 / Math.pow(listing.distance + 1, 0.5);
-        const proximityScore = 100 / Math.pow(this.calculateDistanceInMiles(lat, lng, listing.latitude, listing.longitude) + 1, 0.5);
-
-
-        // const proximityScore = 100 / (1 + listing.distance)
-
-        // Hyperbolic decay (adjust k as needed)
-        const k = 24; // Tune this!
-        const freshnessScore = 100 / (1 + hoursOld / k);
-        const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
+      const  uniqueListings = Array.from(listingMap.values());
+      let sorted: any =  uniqueListings;
+      if(is_usa !== true){
+        const scoredListings = uniqueListings.map(listing => {
+          // const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
+          // const proximityScore = (1 / (listing.distance + 1)) * 100;
+          // const freshnessScore = Math.max(0, 100 - hoursOld * 2);
+  
+          const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
       
-        // console.log(listing.latitude, listing.longitude)
+          // Improved proximity score - higher for closer distances
+          // Using inverse square gives better differentiation for nearby items
+          // const proximityScore = 100 / Math.pow(listing.distance + 1, 0.5);
+          const proximityScore = 100 / Math.pow(this.calculateDistanceInMiles(lat, lng, listing.latitude, listing.longitude) + 1, 0.5);
+  
+  
+          // const proximityScore = 100 / (1 + listing.distance)
+  
+          // Hyperbolic decay (adjust k as needed)
+          const k = 24; // Tune this!
+          const freshnessScore = 100 / (1 + hoursOld / k);
+          const finalScore = (proximityScore * proximityWeight) + (freshnessScore * freshnessWeight);
+        
+          // console.log(listing.latitude, listing.longitude)
+  
+          // console.log(" ====================================")
+          // console.log("listing => ", listing.title, 
+          //   " distance: ",this.calculateDistanceInMiles(lat, lng, listing.latitude, listing.longitude), 
+          //   " hoursOld: ", hoursOld, 
+          //   " proximityScore: ", proximityScore, 
+          //   " freshnessScore: ",freshnessScore, 
+          //   " finalScore: ", finalScore)
+          // console.log(" ====================================")
+  
+          return {
+            ...listing,
+            _score: finalScore,
+          };
+        });
+  
+        sorted = scoredListings.sort((a, b) => b._score - a._score);
+      }else{
+        sorted = uniqueListings
+//         sorted = uniqueListings.sort((a, b) => 
+//           new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+//         );
 
-        // console.log(" ====================================")
-        // console.log("listing => ", listing.title, 
-        //   " distance: ",this.calculateDistanceInMiles(lat, lng, listing.latitude, listing.longitude), 
-        //   " hoursOld: ", hoursOld, 
-        //   " proximityScore: ", proximityScore, 
-        //   " freshnessScore: ",freshnessScore, 
-        //   " finalScore: ", finalScore)
-        // console.log(" ====================================")
+//         const testSort = [...uniqueListings]
+//   .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
-        return {
-          ...listing,
-          _score: finalScore,
-        };
-      });
+// console.log('Before sort:', uniqueListings.slice(0, 3).map(l => l.updated_at));
+// console.log('After sort:', testSort.slice(0, 3).map(l => l.updated_at));
+        // console.log(sorted)
+      }
+      // Score listings (proximity + freshness)
 
-      const sorted = scoredListings.sort((a, b) => b._score - a._score);
+      
 
       
       // for (const listing of sorted) {
       //   console.log("listing => ", listing.title, listing._score)
       // }
-      const limitedListings = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
+      const limitedListings = uniqueListings.slice(numberOfShownListings, numberOfShownListings + limit);
 
       const groupsWithAds = await this.getActiveAdGroupsWithGeoMatchedAds(category || 'HOME', lat, lng);
 
