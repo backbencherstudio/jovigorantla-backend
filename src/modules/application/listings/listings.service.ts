@@ -38,6 +38,7 @@ interface CityResult {
 @Injectable()
 export class ListingsService {
   constructor(private prisma: PrismaService) { }
+  
   async create(createListingDto: CreateListingDto, image: Express.Multer.File) {
     try {
       // Validate image requirement
@@ -114,6 +115,7 @@ export class ListingsService {
         const isUsa = otherData?.post_to_usa === true || (otherData?.post_to_usa as any) === "true";
         // console.log("Is usa => ", isUsa)
 
+        // console.log("address => ", otherData?.address)
         // Prepare listing data
         const data: any = {
           category: otherData.category,
@@ -140,18 +142,20 @@ export class ListingsService {
           }
           data.slug = slug;
         }
-        if (image) {
-          // upload image
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+        
 
-          await SojebStorage.put("listing/" + fileName, image.buffer);
-
-          data.image = fileName;
-        }
+          if (image) {
+            // upload image
+            const randomName = Array(32)
+              .fill(null)
+              .map(() => Math.round(Math.random() * 16).toString(16))
+              .join('');
+            const fileName = `${randomName}${image.originalname.replace(/\s+/g, '-')}`;
+  
+            await SojebStorage.put("listing/" + fileName, image.buffer);
+  
+            data.image = fileName;
+          }
 
         // Create listing with city connections
         const newListing = await prisma.listing.create({
@@ -175,7 +179,7 @@ export class ListingsService {
         { timeout: 100000 }
       );
     } catch (error) {
-      // console.error("Listing creation error:", error);
+      console.error("Listing creation error:", error);
       return {
         success: false,
         message: 'Failed to create listing',
@@ -1499,6 +1503,8 @@ export class ListingsService {
       // const proximityWeight = 0.5
       // const freshnessWeight = 0.5
 
+      console.log("is usa => ", is_usa)
+
 
       // Initialize session ad tracking if not exists
       if (!userSession?.adTracking) {
@@ -1598,7 +1604,10 @@ export class ListingsService {
 
       const  uniqueListings = Array.from(listingMap.values());
       let sorted: any =  uniqueListings;
+
+      
       if(is_usa !== true){
+        console.log("hey")
         const scoredListings = uniqueListings.map(listing => {
           // const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
           // const proximityScore = (1 / (listing.distance + 1)) * 100;
@@ -1636,7 +1645,7 @@ export class ListingsService {
           };
         });
   
-        sorted = scoredListings.sort((a, b) => b._score - a._score);
+        sorted = scoredListings.sort((a, b) =>  b._score - a._score  );
       }else{
         sorted = uniqueListings
 //         sorted = uniqueListings.sort((a, b) => 
@@ -1658,7 +1667,7 @@ export class ListingsService {
       // for (const listing of sorted) {
       //   console.log("listing => ", listing.title, listing._score)
       // }
-      const limitedListings = uniqueListings.slice(numberOfShownListings, numberOfShownListings + limit);
+      const limitedListings = sorted.slice(numberOfShownListings, numberOfShownListings + limit);
 
       const groupsWithAds = await this.getActiveAdGroupsWithGeoMatchedAds(category || 'HOME', lat, lng);
 

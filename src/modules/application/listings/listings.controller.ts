@@ -56,8 +56,6 @@ export class ListingsController {
   )
   async create(@Req() req: Request, @Body() createListingDto: any, @UploadedFile() image: Express.Multer.File) {
     try {
-      // console.log("form controller", createListingDto);
-      console.log("image", image)
       createListingDto.user_id = req.user.userId;
       createListingDto.cities = JSON.parse(createListingDto.cities);
       return await this.listingsService.create(createListingDto, image);;
@@ -112,6 +110,8 @@ export class ListingsController {
       // const lat = 40.7128; // Latitude for New York
       // const lng = -74.006; // Longitude for New York
       // const radius = 5; // 5miles radius
+
+      // console.log("nearByDto", nearByDto)
 
       return await this.listingsService.findNearbyListings(
         nearByDto?.lat,
