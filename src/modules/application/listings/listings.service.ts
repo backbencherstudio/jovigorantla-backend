@@ -1503,7 +1503,7 @@ export class ListingsService {
       // const proximityWeight = 0.5
       // const freshnessWeight = 0.5
 
-      console.log("is usa => ", is_usa)
+      // console.log("is usa => ", is_usa)
 
 
       // Initialize session ad tracking if not exists
@@ -1607,7 +1607,7 @@ export class ListingsService {
 
       
       if(is_usa !== true){
-        console.log("hey")
+        // console.log("hey")
         const scoredListings = uniqueListings.map(listing => {
           // const hoursOld = (now.getTime() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60);
           // const proximityScore = (1 / (listing.distance + 1)) * 100;

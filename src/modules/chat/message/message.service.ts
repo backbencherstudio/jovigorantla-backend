@@ -9,7 +9,7 @@ import { DateHelper } from '../../../common/helper/date.helper';
 import { MessageGateway } from './message.gateway';
 import { UserRepository } from '../../../common/repository/user/user.repository';
 import { Role } from 'src/common/guard/role/role.enum';
-import * as moment from 'moment-timezone';
+// import * as moment from 'moment-timezone';
 
 @Injectable()
 export class MessageService {
@@ -177,22 +177,22 @@ export class MessageService {
           },
         });
 
-        const createdAtInUserTimezone = moment(conversation.created_at)
-          .tz(timezone) // Use the timezone parameter passed to the method
-          .format('YYYY-MM-DD HH:mm:ss');
-        const updatedAtInUserTimezone = moment(conversation.updated_at)
-          .tz(timezone)
-          .format('YYYY-MM-DD HH:mm:ss');
+        // const createdAtInUserTimezone = moment(conversation.created_at)
+        //   .tz(timezone) // Use the timezone parameter passed to the method
+        //   .format('YYYY-MM-DD HH:mm:ss');
+        // const updatedAtInUserTimezone = moment(conversation.updated_at)
+        //   .tz(timezone)
+        //   .format('YYYY-MM-DD HH:mm:ss');
 
-        updatedConversation.created_at = createdAtInUserTimezone as any;
-        updatedConversation.updated_at = updatedAtInUserTimezone as any;
+        // updatedConversation.created_at = createdAtInUserTimezone as any;
+        // updatedConversation.updated_at = updatedAtInUserTimezone as any;
 
 
-        updatedConversation.messages.forEach((msg) => {
-          msg.created_at = moment(msg.created_at)
-            .tz(timezone) // Use the timezone parameter passed to the method
-            .format('YYYY-MM-DD HH:mm:ss') as any;
-        });
+        // updatedConversation.messages.forEach((msg) => {
+        //   msg.created_at = moment(msg.created_at)
+        //     .tz(timezone) // Use the timezone parameter passed to the method
+        //     .format('YYYY-MM-DD HH:mm:ss') as any;
+        // });
         // console.log('updatedConversation', updatedConversation)
 
         this.messageGateway.server
@@ -213,9 +213,9 @@ export class MessageService {
       });
 
       // Convert message created_at to user's timezone
-      const messageCreatedAtInUserTimezone = moment(message.created_at)
-        .tz(timezone) // Use the timezone parameter passed to the method
-        .format('YYYY-MM-DD HH:mm:ss');
+      // const messageCreatedAtInUserTimezone = moment(message.created_at)
+      //   .tz(timezone) // Use the timezone parameter passed to the method
+      //   .format('YYYY-MM-DD HH:mm:ss');
 
       // 5. Update conversation timestamp
       await this.prisma.conversation.update({
@@ -238,7 +238,7 @@ export class MessageService {
         success: true,
         data: {
           ...message,
-          created_at: messageCreatedAtInUserTimezone,
+          // created_at: messageCreatedAtInUserTimezone,
         },
         message: 'Message sent successfully',
       };
@@ -285,13 +285,13 @@ export class MessageService {
         },
       });
 
-      conversation.created_at = moment(conversation.created_at)
-        .tz(timezone)
-        .format('YYYY-MM-DD HH:mm:ss') as any;
+      // conversation.created_at = moment(conversation.created_at)
+      //   .tz(timezone)
+      //   .format('YYYY-MM-DD HH:mm:ss') as any;
 
-      conversation.updated_at = moment(conversation.updated_at)
-        .tz(timezone)
-        .format('YYYY-MM-DD HH:mm:ss') as any;
+      // conversation.updated_at = moment(conversation.updated_at)
+      //   .tz(timezone)
+      //   .format('YYYY-MM-DD HH:mm:ss') as any;
 
       if (!conversation) {
         return {
@@ -362,9 +362,9 @@ export class MessageService {
           );
         }
 
-        message.created_at = moment(message.created_at)
-         .tz(timezone)
-         .format('YYYY-MM-DD HH:mm:ss') as any;
+        // message.created_at = moment(message.created_at)
+        //  .tz(timezone)
+        //  .format('YYYY-MM-DD HH:mm:ss') as any;
 
         
       }

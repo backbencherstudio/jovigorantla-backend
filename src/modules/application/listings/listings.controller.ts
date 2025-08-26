@@ -58,6 +58,8 @@ export class ListingsController {
     try {
       createListingDto.user_id = req.user.userId;
       createListingDto.cities = JSON.parse(createListingDto.cities);
+
+      console.log("createListingDto", createListingDto);
       return await this.listingsService.create(createListingDto, image);;
     } catch (error) {
       // console.log("form controller", error);
