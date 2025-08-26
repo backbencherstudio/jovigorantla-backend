@@ -7,7 +7,7 @@ import appConfig from '../../../config/app.config';
 import { SojebStorage } from '../../../common/lib/Disk/SojebStorage';
 import { DateHelper } from '../../../common/helper/date.helper';
 import { MessageGateway } from '../message/message.gateway';
-import * as moment from 'moment-timezone';
+// import * as moment from 'moment-timezone';
 
 @Injectable()
 export class ConversationService {
@@ -108,14 +108,14 @@ export class ConversationService {
 
       if (conversation) {
 
-        const createdAtInUserTimezone = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss');
-        const updatedAtInUserTimezone = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss');
+        // const createdAtInUserTimezone = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss');
+        // const updatedAtInUserTimezone = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss');
         // Convert message created_at to user's timezone
-        if(conversation.messages.length > 0) {
-          for (const message of conversation.messages) {
-            message.created_at = moment(message.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
-          }
-        }
+        // if(conversation.messages.length > 0) {
+        //   for (const message of conversation.messages) {
+        //     message.created_at = moment(message.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
+        //   }
+        // }
 
         await this.prisma.conversation.update({
           where: {
@@ -144,8 +144,8 @@ export class ConversationService {
           message: 'Conversation already exists',
           data: {
             ...conversation,
-            created_at: createdAtInUserTimezone,
-            updated_at: updatedAtInUserTimezone,
+            // created_at: createdAtInUserTimezone,
+            // updated_at: updatedAtInUserTimezone,
           },
         };
       }
@@ -197,8 +197,8 @@ export class ConversationService {
 
 
       // Convert created_at and updated_at to user's timezone
-      conversation.created_at = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
-      conversation.updated_at = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
+      // conversation.created_at = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
+      // conversation.updated_at = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
 
       // add image url
       if (conversation.creator.avatar) {
@@ -462,24 +462,24 @@ export class ConversationService {
       // Add avatar URLs and format response
       const data = conversations.map((conversation) => {
         // Convert created_at and updated_at to user's timezone
-        const createdAtInUserTimezone = moment(conversation.created_at)
-          .tz(userTimezone)
-          .format('YYYY-MM-DD HH:mm:ss');
-        const updatedAtInUserTimezone = moment(conversation.updated_at)
-          .tz(userTimezone)
-          .format('YYYY-MM-DD HH:mm:ss');
+        // const createdAtInUserTimezone = moment(conversation.created_at)
+        //   .tz(userTimezone)
+        //   .format('YYYY-MM-DD HH:mm:ss');
+        // const updatedAtInUserTimezone = moment(conversation.updated_at)
+        //   .tz(userTimezone)
+          // .format('YYYY-MM-DD HH:mm:ss');
 
         // Convert message created_at to user's timezone
-        const messages = conversation.messages.map((message) => {
-          const messageCreatedAtInUserTimezone = moment(message.created_at)
-            .tz(userTimezone)
-            .format('YYYY-MM-DD HH:mm:ss');
+        // const messages = conversation.messages.map((message) => {
+        //   const messageCreatedAtInUserTimezone = moment(message.created_at)
+        //     .tz(userTimezone)
+        //     .format('YYYY-MM-DD HH:mm:ss');
 
-          return {
-            ...message,
-            created_at: messageCreatedAtInUserTimezone, // Adding formatted message created_at
-          };
-        });
+        //   return {
+        //     ...message,
+        //     created_at: messageCreatedAtInUserTimezone, // Adding formatted message created_at
+        //   };
+        // });
 
         const creator = {
           ...conversation.creator,
@@ -497,11 +497,11 @@ export class ConversationService {
 
         return {
           ...conversation,
-          created_at: createdAtInUserTimezone, // Adding the formatted created_at
-          updated_at: updatedAtInUserTimezone, // Adding the formatted updated_at
+          // created_at: createdAtInUserTimezone, // Adding the formatted created_at
+          // updated_at: updatedAtInUserTimezone, // Adding the formatted updated_at
           creator,
           participant,
-          messages,
+          // messages,
           unread_count: conversation._count.messages,
         };
       });
@@ -583,8 +583,8 @@ export class ConversationService {
         );
       }
 
-       conversation.created_at = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
-       conversation.updated_at = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
+      //  conversation.created_at = moment(conversation.created_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
+      //  conversation.updated_at = moment(conversation.updated_at).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss') as any;
 
       return {
         success: true,
