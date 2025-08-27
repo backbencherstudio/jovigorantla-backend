@@ -127,6 +127,12 @@ export class MessageService {
             { participant_id: user_id },
           ],
         },
+        include: {
+          messages: true,
+          creator: { select: { id: true, name: true, avatar: true } },
+            participant: { select: { id: true, name: true, avatar: true } },
+            listing: { select: { id: true, title: true } },
+        }
       });
 
       if (!conversation) {
@@ -159,7 +165,7 @@ export class MessageService {
         // console.log('deletedField', deletedField)
         await this.prisma.conversation.update({
           where: { id: data.conversation_id },
-          data: { [deletedField]: null },
+          data: { [deletedField]: false },
         });
 
         // Emit restored conversation back to receiver (user who deleted it)
@@ -169,13 +175,37 @@ export class MessageService {
             creator: { select: { id: true, name: true, avatar: true } },
             participant: { select: { id: true, name: true, avatar: true } },
             listing: { select: { id: true, title: true } },
-            messages: {
-              // take: 1,
-              orderBy: { created_at: 'asc' },
-              // select: { id: true, message: true, created_at: true },
-            },
+            // messages: {
+            //   // take: 1,
+            //   orderBy: { created_at: 'asc' },
+            //   // select: { id: true, message: true, created_at: true },
+            // },
           },
         });
+
+        const where = {
+          id: data.conversation_id,
+        };
+
+        const isCreator = user_id === conversation.creator_id;
+        if (isCreator && conversation.deleted_by_creator_at) {
+          where['created_at'] = {
+            gt: conversation.deleted_by_creator_at,
+          };
+        } else if (!isCreator && conversation.deleted_by_participant_at) {
+          where['created_at'] = {
+            gt: conversation.deleted_by_participant_at,
+          };
+        }
+
+        const messages = await this.prisma.message.findMany({
+          where,
+          orderBy: { created_at: 'asc' },
+          take: 1,
+          select: { id: true, message: true, created_at: true },
+        });
+
+        updatedConversation['messages'] = messages;
 
         // const createdAtInUserTimezone = moment(conversation.created_at)
         //   .tz(timezone) // Use the timezone parameter passed to the method
@@ -201,7 +231,14 @@ export class MessageService {
             from: user_id,
             data: updatedConversation,
           });
-      }
+      } 
+      // else if (conversation.messages.length == 0) {
+      //   const receiver_id = conversation.creator_id === user_id ? conversation.participant_id : conversation.creator_id
+      //   this.messageGateway.server.to(receiver_id).emit('conversation', {
+      //     from: data.participant_id,
+      //     data: conversation,
+      //   });
+      // }
 
       // 4. Create the message
       const message = await this.prisma.message.create({
@@ -220,8 +257,18 @@ export class MessageService {
       // 5. Update conversation timestamp
       await this.prisma.conversation.update({
         where: { id: data.conversation_id },
-        data: { updated_at: DateHelper.now() },
+        data: { updated_at: DateHelper.now(),
+          deleted_by_creator: false,
+          deleted_by_participant: false,
+        },
+        include: {
+          messages: true
+        }
       });
+
+
+
+
 
 
 
@@ -310,8 +357,8 @@ export class MessageService {
 
 
       const deleteTime = conversation.creator_id === user_id
-        ? conversation.deleted_by_creator
-        : conversation.deleted_by_participant;
+        ? conversation.deleted_by_creator_at
+        : conversation.deleted_by_participant_at;
 
       const messages = await this.prisma.message.findMany({
         ...paginationData,
@@ -366,7 +413,7 @@ export class MessageService {
         //  .tz(timezone)
         //  .format('YYYY-MM-DD HH:mm:ss') as any;
 
-        
+
       }
 
       // add image url

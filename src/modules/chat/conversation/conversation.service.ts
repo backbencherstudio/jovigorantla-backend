@@ -50,6 +50,12 @@ export class ConversationService {
           participant_id: true,
           created_at: true,
           updated_at: true,
+          deleted_by_creator: true,
+          deleted_by_participant: true,
+          deleted_by_creator_at: true,
+          deleted_by_participant_at: true,
+          blocked_by_creator: true,
+          blocked_by_participant: true,
           creator: {
             select: {
               id: true,
@@ -70,18 +76,18 @@ export class ConversationService {
               title: true,
             }
           },
-          messages: {
-            orderBy: {
-              created_at: 'asc',
-            },
-            // take: 1,
-            // select: {
-            //   id: true,
-            //   message: true,
-            //   created_at: true,
-              
-            // },
-          },
+          // messages: {
+          //   orderBy: {
+          //     created_at: 'asc',
+          //   },
+          //   // take: 1,
+          //   // select: {
+          //   //   id: true,
+          //   //   message: true,
+          //   //   created_at: true,
+
+          //   // },
+          // },
         },
         where: {
           listing_id: createConversationDto.listing_id,
@@ -123,9 +129,9 @@ export class ConversationService {
           },
           data: {
             updated_at: new Date(),
-            deleted_by_participant: null,
-            deleted_by_creator: null,
-          },
+            // deleted_by_participant: false,
+            // deleted_by_creator: false,
+          },  
         });
 
 
@@ -139,6 +145,38 @@ export class ConversationService {
         //   },
         // });
 
+
+        const where = {
+          id: data.conversation_id,
+        };
+
+        const isCreator = createConversationDto.creator_id === conversation.creator_id;
+        if (isCreator && conversation.deleted_by_creator_at) {
+          where['created_at'] = {
+            gt: conversation.deleted_by_creator_at,
+          };
+        } else if(!isCreator && conversation.deleted_by_participant_at) {
+          where['created_at'] = {
+            gt: conversation.deleted_by_participant_at,
+          };
+        }
+
+        const messages = await this.prisma.message.findMany({
+          where,
+          orderBy: { created_at: 'asc' },
+          take: 1,
+          select: { id: true, message: true, created_at: true },
+        });
+
+        conversation['messages'] = messages;
+
+        // add image url
+        if (conversation.creator.avatar) {
+          conversation.creator['avatar_url'] = SojebStorage.url(
+            appConfig().storageUrl.avatar + conversation.creator.avatar,
+          );
+        }
+
         return {
           success: true,
           message: 'Conversation already exists',
@@ -151,6 +189,11 @@ export class ConversationService {
       }
 
 
+      // data['deleted_by_creator'] = true;
+      // data['deleted_by_creator_at'] = new Date();
+      data['deleted_by_participant'] = true;
+      data['deleted_by_participant_at'] = new Date();
+
       conversation = await this.prisma.conversation.create({
         select: {
           id: true,
@@ -158,6 +201,12 @@ export class ConversationService {
           participant_id: true,
           created_at: true,
           updated_at: true,
+          deleted_by_creator: true,
+          deleted_by_participant: true,
+          deleted_by_creator_at: true,
+          deleted_by_participant_at: true,
+          blocked_by_creator: true,
+          blocked_by_participant: true,
           creator: {
             select: {
               id: true,
@@ -219,11 +268,11 @@ export class ConversationService {
         from: data.creator_id,
         data: conversation,
       });
-      this.messageGateway.server.to(data.participant_id).emit('conversation', {
-        // this.messageGateway.server.emit('conversation', {
-        from: data.participant_id,
-        data: conversation,
-      });
+      // this.messageGateway.server.to(data.participant_id).emit('conversation', {
+      //   // this.messageGateway.server.emit('conversation', {
+      //   from: data.participant_id,
+      //   data: conversation,
+      // });
 
       return {
         success: true,
@@ -231,6 +280,7 @@ export class ConversationService {
         data: conversation,
       };
     } catch (error) {
+      console.log(error)
       return {
         success: false,
         message: error.message,
@@ -380,11 +430,11 @@ export class ConversationService {
               OR: [
                 {
                   creator_id: user_id,
-                  deleted_by_creator: null,
+                  deleted_by_creator: false,
                 },
                 {
                   participant_id: user_id,
-                  deleted_by_participant: null,
+                  deleted_by_participant: false,
                 },
               ],
             },
@@ -407,6 +457,8 @@ export class ConversationService {
           updated_at: true,
           deleted_by_creator: true,
           deleted_by_participant: true,
+          deleted_by_creator_at: true,
+          deleted_by_participant_at: true,
           blocked_by_creator: true,
           blocked_by_participant: true,
           creator: {
@@ -467,7 +519,7 @@ export class ConversationService {
         //   .format('YYYY-MM-DD HH:mm:ss');
         // const updatedAtInUserTimezone = moment(conversation.updated_at)
         //   .tz(userTimezone)
-          // .format('YYYY-MM-DD HH:mm:ss');
+        // .format('YYYY-MM-DD HH:mm:ss');
 
         // Convert message created_at to user's timezone
         // const messages = conversation.messages.map((message) => {
@@ -495,20 +547,40 @@ export class ConversationService {
             : null,
         };
 
+        const isCreator = conversation.creator_id === user_id ;
+
+        const cutoff =
+          isCreator ? conversation.deleted_by_creator_at : conversation.deleted_by_participant_at;
+
+        // console.log("cuttoff", conversation.id, conversation.deleted_by_creator_at, conversation.deleted_by_participant_at)
+        const msgs = cutoff
+          ? conversation.messages.filter((m) => m.created_at > cutoff)
+          : conversation.messages;
+
+        // console.log("msgs =>", msgs.length, conversation.messages.length)
+
+        console.log()
+        // unread count for logged-in user AFTER pruning
+        const unreadCount = msgs.reduce(
+          (acc, m) => acc + (!m.is_read && m.receiver_id === user_id ? 1 : 0),
+          0
+        );
+
         return {
           ...conversation,
           // created_at: createdAtInUserTimezone, // Adding the formatted created_at
           // updated_at: updatedAtInUserTimezone, // Adding the formatted updated_at
           creator,
           participant,
-          // messages,
-          unread_count: conversation._count.messages,
+          messages: msgs,
+          unread_count: unreadCount,
         };
       });
 
       return {
         success: true,
         data,
+
       };
     } catch (error) {
       // console.log(error);
@@ -824,12 +896,31 @@ export class ConversationService {
 
       const isCreator = conversation.creator_id === userId;
 
-      await this.prisma.conversation.update({
+      const data = await this.prisma.conversation.update({
         where: { id },
         data: isCreator
-          ? { deleted_by_creator: new Date() }
-          : { deleted_by_participant: new Date() },
+          ? { 
+            deleted_by_creator: true,
+            deleted_by_creator_at: new Date(),
+          }
+          : { 
+            deleted_by_participant: true,
+            deleted_by_participant_at: new Date(),
+
+          },
       });
+
+      // await this.prisma.message.updateMany({
+      //   where: {
+      //     conversation_id: id,
+      //   },
+      //   data: {
+      //     deleted_by_creator: isCreator ? new Date() : null,
+      //     deleted_by_participant: isCreator ? null : new Date(),
+      //   },
+      // });
+
+      console.log(data)
 
       await this.messageGateway.server.to(userId).emit('conversation-soft-deleted', {
         conversation_id: id,

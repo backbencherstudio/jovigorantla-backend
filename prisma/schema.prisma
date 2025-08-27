@@ -221,10 +221,13 @@ model Message {
   id              String         @id @default(cuid())
   created_at      DateTime       @default(now())  @db.Timestamptz
   updated_at      DateTime       @updatedAt       @db.Timestamptz
+
   deleted_at      DateTime?
   deleted_by_id   String?
   deleted_by      User?          @relation("deleted_by", fields: [deleted_by_id], references: [id], onDelete: SetNull)
   deleted_for     String?        @default("self") // self, everyone
+
+
   status          MessageStatus? @default(PENDING)
   sender_id       String?
   receiver_id     String?
@@ -264,8 +267,15 @@ model Conversation {
   participant_id String?
   listing_id     String?
 
-  deleted_by_creator     DateTime?
-  deleted_by_participant DateTime?
+  
+
+  deleted_by_creator     Boolean   @default(false)
+  deleted_by_participant Boolean   @default(false)
+
+  deleted_by_creator_at     DateTime?
+  deleted_by_participant_at DateTime?
+
+
   blocked_by_creator     Boolean   @default(false)
   blocked_by_participant Boolean   @default(false)
 
