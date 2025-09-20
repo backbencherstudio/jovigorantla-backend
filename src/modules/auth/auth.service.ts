@@ -13,14 +13,13 @@ import { DateHelper } from '../../common/helper/date.helper';
 import { StripePayment } from 'src/common/lib/Payment/stripe/StripePayment';
 import { randomInt } from 'crypto';
 
-
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mailService: MailService,
-  ) { }
+  ) {}
 
   async me(userId: string) {
     try {
@@ -204,7 +203,6 @@ export class AuthService {
         }
         return result;
       } else {
-
         throw new UnauthorizedException('Password not matched');
         // return {
         //   success: false,
@@ -243,7 +241,11 @@ export class AuthService {
           email: email,
           name: name,
         });
-        const payload = { email: email, sub: user.data.id, role: user.data.type };
+        const payload = {
+          email: email,
+          sub: user.data.id,
+          role: user.data.type,
+        };
         const token = this.jwtService.sign(payload);
 
         return {
@@ -283,9 +285,15 @@ export class AuthService {
   //   }
   // }
 
-
-
-  async login({ email, userId, res }: { email: string; userId: string; res: any }) {
+  async login({
+    email,
+    userId,
+    res,
+  }: {
+    email: string;
+    userId: string;
+    res: any;
+  }) {
     // const payload = { username: user.username, sub: user.userId };
     // const token = this.jwtService.sign(payload);
     try {
@@ -304,17 +312,15 @@ export class AuthService {
       return {
         success: true,
         message: 'Logged in successfully',
+        token: token,
       };
     } catch (error) {
       return {
         success: false,
-        message: "Failed to login"
-      }
+        message: 'Failed to login',
+      };
     }
   }
-
-
-
 
   async register({
     name,
@@ -343,12 +349,11 @@ export class AuthService {
         };
       }
 
-
       // check varification exist or not
       const existOtp = await this.prisma.verificationCode.findFirst({
         where: {
           email: email,
-          code: otp
+          code: otp,
         },
       });
 
@@ -373,7 +378,7 @@ export class AuthService {
         };
       }
 
-      // delete the verification code 
+      // delete the verification code
       await this.prisma.verificationCode.delete({
         where: {
           id: existOtp.id,
@@ -450,10 +455,8 @@ export class AuthService {
     }
   }
 
-
   async sendOtp(email: string) {
     try {
-
       // check if email exist in users table
       const user = await UserRepository.exist({
         field: 'email',
@@ -487,14 +490,13 @@ export class AuthService {
       await this.mailService.sendOtpCodeToEmail({
         email,
         name: email,
-        otp: code
+        otp: code,
       });
 
       return {
         success: true,
         message: 'We have sent an OTP code to your email',
       };
-
     } catch (error) {
       return {
         success: false,
@@ -523,14 +525,13 @@ export class AuthService {
         return {
           success: false,
           message: 'Invalid OTP',
-        }
-      };
+        };
+      }
 
       return {
         success: true,
         message: 'OTP verified',
-      }
-
+      };
     } catch (error) {
       // delete verification code
       await this.prisma.verificationCode.deleteMany({
@@ -542,12 +543,9 @@ export class AuthService {
       return {
         success: false,
         message: 'Invalid OTP',
-      }
+      };
     }
   }
-
-
-
 
   async forgotPassword(email) {
     try {

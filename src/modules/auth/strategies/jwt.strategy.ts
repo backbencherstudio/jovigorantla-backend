@@ -10,14 +10,16 @@ import { UserRepository } from 'src/common/repository/user/user.repository';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     super({
-      // jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      //jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       // ignoreExpiration: false,
+
       jwtFromRequest: ExtractJwt.fromExtractors([
         (req: Request) => {
           // console.log('cookie => ', req?.cookies?.jwt);
-          return req?.cookies?.jwt || null
+          return req?.cookies?.jwt || null;
         },
       ]),
+
       ignoreExpiration: true,
       secretOrKey: appConfig().jwt.secret,
     });
