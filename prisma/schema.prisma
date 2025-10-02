@@ -75,6 +75,10 @@ model User {
   reports Report[]
   deleted_messages          Message[]            @relation("deleted_by")
 
+  // username changes
+  name_change_count     Int @default(0)
+  name_change_date      DateTime? @db.Timestamptz
+
   @@map("users")
 }
 

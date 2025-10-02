@@ -39,6 +39,8 @@ export class AuthService {
           // gender: true,
           // date_of_birth: true,
           created_at: true,
+          name_change_count: true,
+          name_change_date: true,
         },
       });
 
@@ -83,6 +85,10 @@ export class AuthService {
       const data: any = {};
       if (updateUserDto.name) {
         data.name = updateUserDto.name;
+        data.name_change_count = {
+          increment: 1
+        }
+        data.name_change_date = new Date()
       }
       // if (updateUserDto.first_name) {
       //   data.first_name = updateUserDto.first_name;
